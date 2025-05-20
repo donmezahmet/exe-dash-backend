@@ -11,6 +11,7 @@ const JIRA_DOMAIN = process.env.JIRA_DOMAIN;
 const JIRA_EMAIL = process.env.JIRA_EMAIL;
 const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN;
 const PROJECT_KEY = process.env.PROJECT_KEY;
+
 const authHeader = {
   headers: {
     Authorization: `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64')}`,
@@ -18,6 +19,7 @@ const authHeader = {
   }
 };
 
+// Get all issues
 app.get('/api/issues', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
@@ -30,6 +32,7 @@ app.get('/api/issues', async (req, res) => {
   }
 });
 
+// Get finding summary (with number of related actions)
 app.get('/api/finding-summary', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
@@ -58,6 +61,7 @@ app.get('/api/finding-summary', async (req, res) => {
   }
 });
 
+// Get count of each status grouped by year
 app.get('/api/finding-status-by-year', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
@@ -66,28 +70,21 @@ app.get('/api/finding-status-by-year', async (req, res) => {
     const issues = response.data.issues;
 
     const statusByYear = {};
-    const today = new Date();
 
     issues.forEach(issue => {
       const yearValue = issue.fields.customfield_16447;
       const year = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
       const status = issue.fields.status.name;
-      const dueDate = issue.fields.duedate ? new Date(issue.fields.duedate) : null;
-
-      let category;
-      if (status.toLowerCase() === 'completed') {
-        category = 'Completed';
-      } else if (dueDate && dueDate < today) {
-        category = 'Overdue';
-      } else {
-        category = 'Open';
-      }
 
       if (!statusByYear[year]) {
-        statusByYear[year] = { Completed: 0, Open: 0, Overdue: 0 };
+        statusByYear[year] = {};
       }
 
-      statusByYear[year][category]++;
+      if (!statusByYear[year][status]) {
+        statusByYear[year][status] = 0;
+      }
+
+      statusByYear[year][status]++;
     });
 
     res.json(statusByYear);
@@ -97,6 +94,8 @@ app.get('/api/finding-status-by-year', async (req, res) => {
   }
 });
 
+
+// Get finding details by year & status
 app.get('/api/finding-details', async (req, res) => {
   const { year, status } = req.query;
 
@@ -109,26 +108,14 @@ app.get('/api/finding-details', async (req, res) => {
     const url = `${JIRA_DOMAIN}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=200`;
     const response = await axios.get(url, authHeader);
     const issues = response.data.issues;
-    const today = new Date();
 
     const matching = issues.filter(issue => {
       const yearValue = issue.fields.customfield_16447;
       const issueYear = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
       const normalizedYear = issueYear === 'Unknown' ? 'Not Assigned' : issueYear;
-
       const issueStatus = issue.fields.status.name;
-      const dueDate = issue.fields.duedate ? new Date(issue.fields.duedate) : null;
 
-      let category;
-      if (issueStatus.toLowerCase() === 'completed') {
-        category = 'Completed';
-      } else if (dueDate && dueDate < today) {
-        category = 'Overdue';
-      } else {
-        category = 'Open';
-      }
-
-      return (normalizedYear === year) && category === status;
+      return (normalizedYear === year) && issueStatus === status;
     });
 
     const result = matching.map(issue => ({
