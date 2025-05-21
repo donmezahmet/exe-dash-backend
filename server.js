@@ -196,7 +196,9 @@ app.get('/api/statistics-by-control-and-risk', async (req, res) => {
     const controlElements = new Set();
 
     issues.forEach(issue => {
-      const control = issue.fields.customfield_19635 || 'Unassigned';
+      const controlField = issue.fields.customfield_19635;
+const control = typeof controlField === 'object' && controlField?.value ? controlField.value : 'Unassigned';
+
       const risk = issue.fields.customfield_12557?.value || 'Unassigned';
 
       controlElements.add(control);
