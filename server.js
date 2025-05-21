@@ -264,7 +264,58 @@ app.get('/api/finding-details-by-control-and-risk', async (req, res) => {
   }
 });
 
+app.get('/api/statistics-by-type-and-risk', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
 
+    const result = {};
+    const riskLevels = ['Critical', 'High', 'Medium', 'Low'];
+    const riskTypes = new Set();
+
+    issues.forEach(issue => {
+      const typeField = issue.fields.customfield_19636;
+      const type = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
+
+      const risk = issue.fields.customfield_12557?.value || 'Unassigned';
+
+      riskTypes.add(type);
+
+      if (!result[type]) result[type] = {};
+      if (!result[type][risk]) result[type][risk] = 0;
+      result[type][risk]++;
+    });
+
+    const finalData = Array.from(riskTypes).map(type => {
+      const row = { type };
+      let total = 0;
+
+      riskLevels.forEach(level => {
+        const count = result[type]?.[level] || 0;
+        row[level] = count;
+        total += count;
+      });
+
+      row.Total = total;
+      return row;
+    });
+
+    const totals = { type: 'Total Unique Issues:' };
+    let grandTotal = 0;
+    riskLevels.forEach(level => {
+      const sum = finalData.reduce((acc, row) => acc + (row[level] || 0), 0);
+      totals[level] = sum;
+      grandTotal += sum;
+    });
+    totals.Total = grandTotal;
+    finalData.push(totals);
+
+    res.json(finalData);
+  } catch (error) {
+    console.error('Failed to fetch statistics by type and risk:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch statistics by type and risk' });
+  }
+});
 
 // Server Start
 app.listen(PORT, () => {
