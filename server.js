@@ -239,6 +239,32 @@ const control = typeof controlField === 'object' && controlField?.value ? contro
     res.status(500).json({ error: 'Failed to fetch statistics by control and risk' });
   }
 });
+// 8. Findings filtered by Control and Risk
+app.get('/api/finding-details-by-control-and-risk', async (req, res) => {
+  const { control, risk } = req.query;
+  if (!control || !risk) return res.status(400).json({ error: 'Missing control or risk parameter' });
+
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
+
+    const result = issues.filter(issue => {
+      const controlField = issue.fields.customfield_19635;
+      const controlVal = typeof controlField === 'object' && controlField?.value ? controlField.value : 'Unassigned';
+      const riskVal = issue.fields.customfield_12557?.value || 'Unassigned';
+      return controlVal === control && riskVal === risk;
+    }).map(issue => ({
+      key: issue.key,
+      summary: issue.fields.summary
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch filtered findings' });
+  }
+});
+
+
 
 // Server Start
 app.listen(PORT, () => {
