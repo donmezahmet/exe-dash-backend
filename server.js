@@ -19,26 +19,43 @@ const authHeader = {
   }
 };
 
-// Get all issues
+// 🔁 Tüm Jira issue'larını pagination ile getirir
+async function getAllIssues(jql) {
+  const maxResults = 100;
+  let startAt = 0;
+  let allIssues = [];
+
+  while (true) {
+    const url = `${JIRA_DOMAIN}/rest/api/3/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${maxResults}`;
+    const response = await axios.get(url, authHeader);
+    const { issues, total } = response.data;
+
+    allIssues = allIssues.concat(issues);
+    if (allIssues.length >= total) break;
+
+    startAt += maxResults;
+  }
+
+  return allIssues;
+}
+
+// 🔹 Genel issue listesi
 app.get('/api/issues', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
-    const url = `${JIRA_DOMAIN}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=100`;
-    const response = await axios.get(url, authHeader);
-    res.json(response.data);
+    const issues = await getAllIssues(jql);
+    res.json({ issues });
   } catch (error) {
     console.error(error?.response?.data || error.message);
     res.status(500).json({ error: 'Jira issues could not be fetched' });
   }
 });
 
-// Get finding summary (with number of related actions)
+// 🔹 Audit Finding özeti (action sayısı ile)
 app.get('/api/finding-summary', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
-    const url = `${JIRA_DOMAIN}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=100`;
-    const response = await axios.get(url, authHeader);
-    const issues = response.data.issues;
+    const issues = await getAllIssues(jql);
 
     const findings = issues.filter(issue => issue.fields.issuetype.name === 'Audit Finding');
     const actions = issues.filter(issue => issue.fields.issuetype.name === 'Finding Action');
@@ -61,13 +78,11 @@ app.get('/api/finding-summary', async (req, res) => {
   }
 });
 
-// Get count of each status grouped by year
+// 🔹 Yıla ve statüye göre gruplanmış Audit Finding sayıları
 app.get('/api/finding-status-by-year', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
-    const url = `${JIRA_DOMAIN}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=200`;
-    const response = await axios.get(url, authHeader);
-    const issues = response.data.issues;
+    const issues = await getAllIssues(jql);
 
     const statusByYear = {};
 
@@ -76,15 +91,8 @@ app.get('/api/finding-status-by-year', async (req, res) => {
       const year = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
       const status = issue.fields.status.name;
 
-      if (!statusByYear[year]) {
-        statusByYear[year] = {};
-      }
-
-      if (!statusByYear[year][status]) {
-        statusByYear[year][status] = 0;
-      }
-
-      statusByYear[year][status]++;
+      if (!statusByYear[year]) statusByYear[year] = {};
+      statusByYear[year][status] = (statusByYear[year][status] || 0) + 1;
     });
 
     res.json(statusByYear);
@@ -94,8 +102,7 @@ app.get('/api/finding-status-by-year', async (req, res) => {
   }
 });
 
-
-// Get finding details by year & status
+// 🔹 Yıla ve statüye göre detay listesi
 app.get('/api/finding-details', async (req, res) => {
   const { year, status } = req.query;
 
@@ -105,9 +112,7 @@ app.get('/api/finding-details', async (req, res) => {
 
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
-    const url = `${JIRA_DOMAIN}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=200`;
-    const response = await axios.get(url, authHeader);
-    const issues = response.data.issues;
+    const issues = await getAllIssues(jql);
 
     const matching = issues.filter(issue => {
       const yearValue = issue.fields.customfield_16447;
@@ -127,6 +132,25 @@ app.get('/api/finding-details', async (req, res) => {
   } catch (error) {
     console.error(error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to fetch finding details' });
+  }
+});
+
+// 🔹 Tüm Audit Finding'ler için statü bazlı dağılım (Pie chart)
+app.get('/api/finding-status-distribution', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
+
+    const statusCounts = {};
+    issues.forEach(issue => {
+      const status = issue.fields.status.name;
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+    res.json(statusCounts);
+  } catch (error) {
+    console.error(error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch status distribution' });
   }
 });
 
