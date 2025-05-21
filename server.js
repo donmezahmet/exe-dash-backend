@@ -128,40 +128,30 @@ app.get('/api/finding-details', async (req, res) => {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
-   const result = issues
+const result = issues
   .filter(issue => {
     const yearValue = issue.fields.customfield_16447;
     const issueYear = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
     const normalizedYear = (issueYear === 'Unknown' ? 'Unknown' : issueYear)?.toString();
-  const issueStatus = issue.fields.status.name.toUpperCase();
-const queryStatus = status.toUpperCase();
+    const issueStatus = issue.fields.status.name;
 
-
-  const isMatch =
-  (year?.toString() === 'all' && issueStatus === queryStatus) ||
-  (normalizedYear === year?.toString() && issueStatus === queryStatus);
-
-
-    // ✅ console.log buraya:
+    const match = (year?.toString() === 'all' && issueStatus === status) || (normalizedYear === year?.toString() && issueStatus === status);
+    
     console.log({
       yearQuery: year,
       issueYearRaw: issueYear,
       normalizedYear,
       issueStatus,
-      match: isMatch
+      match
     });
 
-    return isMatch;
+    return match;
   })
   .map(issue => ({
     key: issue.key,
     summary: issue.fields.summary
   }));
 
-      .map(issue => ({
-        key: issue.key,
-        summary: issue.fields.summary
-      }));
 
     res.json(result);
   } catch (error) {
