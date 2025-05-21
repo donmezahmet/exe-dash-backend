@@ -53,7 +53,9 @@ async function getAllIssues(jql) {
   return allIssues;
 }
 
-// 🔹 Genel issue listesi
+// === API Routes ===
+
+// 1. General Issue List
 app.get('/api/issues', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
@@ -64,7 +66,7 @@ app.get('/api/issues', async (req, res) => {
   }
 });
 
-// 🔹 Audit Finding özeti (action sayısı ile)
+// 2. Audit Finding Summary with Action Count
 app.get('/api/finding-summary', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
@@ -90,14 +92,13 @@ app.get('/api/finding-summary', async (req, res) => {
   }
 });
 
-// 🔹 Yıla ve statüye göre gruplanmış Audit Finding sayıları
+// 3. Findings by Year and Status (Bar Chart)
 app.get('/api/finding-status-by-year', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
     const statusByYear = {};
-
     issues.forEach(issue => {
       const yearValue = issue.fields.customfield_16447;
       const year = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
@@ -113,35 +114,28 @@ app.get('/api/finding-status-by-year', async (req, res) => {
   }
 });
 
-// 🔹 Detay listesi (yıla ve/veya statüye göre)
+// 4. Finding Details by Year and/or Status
 app.get('/api/finding-details', async (req, res) => {
   const { year, status } = req.query;
-
-  if (!status) {
-    return res.status(400).json({ error: 'Missing status parameter' });
-  }
+  if (!status) return res.status(400).json({ error: 'Missing status parameter' });
 
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
-    const matching = issues.filter(issue => {
-      const yearValue = issue.fields.customfield_16447;
-      const issueYear = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
-      const normalizedYear = issueYear === 'Unknown' ? 'Not Assigned' : issueYear;
-      const issueStatus = issue.fields.status.name;
+    const result = issues
+      .filter(issue => {
+        const yearValue = issue.fields.customfield_16447;
+        const issueYear = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
+        const normalizedYear = issueYear === 'Unknown' ? 'Not Assigned' : issueYear;
+        const issueStatus = issue.fields.status.name;
 
-      if (year === 'all') {
-        return issueStatus === status;
-      }
-
-      return normalizedYear === year && issueStatus === status;
-    });
-
-    const result = matching.map(issue => ({
-      key: issue.key,
-      summary: issue.fields.summary
-    }));
+        return (year === 'all' && issueStatus === status) || (normalizedYear === year && issueStatus === status);
+      })
+      .map(issue => ({
+        key: issue.key,
+        summary: issue.fields.summary
+      }));
 
     res.json(result);
   } catch (error) {
@@ -149,7 +143,7 @@ app.get('/api/finding-details', async (req, res) => {
   }
 });
 
-// 🔹 Statü bazlı dağılım (Pie chart için)
+// 5. Status Distribution (Pie Chart)
 app.get('/api/finding-status-distribution', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
@@ -167,20 +161,18 @@ app.get('/api/finding-status-distribution', async (req, res) => {
   }
 });
 
-// 🔹 Horizontal Bar için risk dağılımı
+// 6. Horizontal Risk View (Text-Based)
 app.get('/api/risk-scale-horizontal', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
     const data = {};
-
     issues.forEach(issue => {
       const project = issue.fields.customfield_12126 || 'Unknown Project';
       const risk = issue.fields.customfield_12557?.value || 'Unknown Risk';
 
       if (!data[project]) data[project] = { Critical: 0, High: 0, Medium: 0, Low: 0 };
-
       if (['Critical', 'High', 'Medium', 'Low'].includes(risk)) {
         data[project][risk]++;
       }
@@ -193,7 +185,60 @@ app.get('/api/risk-scale-horizontal', async (req, res) => {
   }
 });
 
+// 7. Internal Control Element × Risk Level Table
+app.get('/api/statistics-by-control-and-risk', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
 
+    const result = {};
+    const riskLevels = ['Critical', 'High', 'Medium', 'Low'];
+    const controlElements = new Set();
+
+    issues.forEach(issue => {
+      const control = issue.fields.customfield_19635 || 'Unassigned';
+      const risk = issue.fields.customfield_12557?.value || 'Unassigned';
+
+      controlElements.add(control);
+
+      if (!result[control]) result[control] = {};
+      if (!result[control][risk]) result[control][risk] = 0;
+      result[control][risk]++;
+    });
+
+    const finalData = Array.from(controlElements).map(control => {
+      const row = { control };
+      let total = 0;
+
+      riskLevels.forEach(level => {
+        const count = result[control]?.[level] || 0;
+        row[level] = count;
+        total += count;
+      });
+
+      row.Total = total;
+      return row;
+    });
+
+    // Totals Row
+    const totals = { control: 'Total Unique Issues:' };
+    let grandTotal = 0;
+    riskLevels.forEach(level => {
+      const sum = finalData.reduce((acc, row) => acc + (row[level] || 0), 0);
+      totals[level] = sum;
+      grandTotal += sum;
+    });
+    totals.Total = grandTotal;
+    finalData.push(totals);
+
+    res.json(finalData);
+  } catch (error) {
+    console.error('Failed to fetch control-risk statistics:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch statistics by control and risk' });
+  }
+});
+
+// Server Start
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
 });
