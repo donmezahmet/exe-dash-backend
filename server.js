@@ -275,7 +275,8 @@ app.get('/api/statistics-by-type-and-risk', async (req, res) => {
 
     issues.forEach(issue => {
       const typeField = issue.fields.customfield_19636;
-      const type = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
+const type = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
+
 
       const risk = issue.fields.customfield_12557?.value || 'Unassigned';
 
@@ -316,6 +317,7 @@ app.get('/api/statistics-by-type-and-risk', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch statistics by type and risk' });
   }
 });
+console.log('customfield_19636:', issue.fields.customfield_19636);
 
 // Server Start
 app.listen(PORT, () => {
