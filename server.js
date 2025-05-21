@@ -19,7 +19,6 @@ const authHeader = {
   }
 };
 
-// 🔁 Tüm Jira issue'larını pagination ile getirir
 async function getAllIssues(jql) {
   const maxResults = 100;
   let startAt = 0;
@@ -39,7 +38,6 @@ async function getAllIssues(jql) {
   return allIssues;
 }
 
-// 🔹 Genel issue listesi
 app.get('/api/issues', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
@@ -51,7 +49,6 @@ app.get('/api/issues', async (req, res) => {
   }
 });
 
-// 🔹 Audit Finding özeti (action sayısı ile)
 app.get('/api/finding-summary', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
@@ -78,7 +75,6 @@ app.get('/api/finding-summary', async (req, res) => {
   }
 });
 
-// 🔹 Yıla ve statüye göre gruplanmış Audit Finding sayıları
 app.get('/api/finding-status-by-year', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
@@ -102,12 +98,12 @@ app.get('/api/finding-status-by-year', async (req, res) => {
   }
 });
 
-// 🔹 Yıla ve statüye göre detay listesi
+// 🔹 Yıla ve statüye göre veya yalnızca statüye göre detay listesi
 app.get('/api/finding-details', async (req, res) => {
   const { year, status } = req.query;
 
-  if (!year || !status) {
-    return res.status(400).json({ error: 'Missing year or status parameter' });
+  if (!status) {
+    return res.status(400).json({ error: 'Missing status parameter' });
   }
 
   try {
@@ -120,7 +116,11 @@ app.get('/api/finding-details', async (req, res) => {
       const normalizedYear = issueYear === 'Unknown' ? 'Not Assigned' : issueYear;
       const issueStatus = issue.fields.status.name;
 
-      return (normalizedYear === year) && issueStatus === status;
+      if (year === 'all') {
+        return issueStatus === status;
+      }
+
+      return normalizedYear === year && issueStatus === status;
     });
 
     const result = matching.map(issue => ({
@@ -135,7 +135,6 @@ app.get('/api/finding-details', async (req, res) => {
   }
 });
 
-// 🔹 Tüm Audit Finding'ler için statü bazlı dağılım (Pie chart)
 app.get('/api/finding-status-distribution', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
