@@ -167,28 +167,32 @@ app.get('/api/finding-status-distribution', async (req, res) => {
   }
 });
 
-// 🔹 Risk Scale by Project (Bubble Chart)
-app.get('/api/risk-scale-by-project', async (req, res) => {
+// 🔹 Horizontal Bar için risk dağılımı
+app.get('/api/risk-scale-horizontal', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
-    const projectRiskData = {};
+    const data = {};
 
     issues.forEach(issue => {
       const project = issue.fields.customfield_12126 || 'Unknown Project';
       const risk = issue.fields.customfield_12557?.value || 'Unknown Risk';
 
-      if (!projectRiskData[project]) projectRiskData[project] = {};
-      projectRiskData[project][risk] = (projectRiskData[project][risk] || 0) + 1;
+      if (!data[project]) data[project] = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+
+      if (['Critical', 'High', 'Medium', 'Low'].includes(risk)) {
+        data[project][risk]++;
+      }
     });
 
-    res.json(projectRiskData);
+    res.json(data);
   } catch (error) {
-    console.error('Risk scale fetch error:', error?.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to fetch risk scale data' });
+    console.error('Horizontal risk scale fetch error:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch horizontal risk scale data' });
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
