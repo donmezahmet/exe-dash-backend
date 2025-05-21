@@ -5,7 +5,12 @@ const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 
 const JIRA_DOMAIN = process.env.JIRA_DOMAIN;
 const JIRA_EMAIL = process.env.JIRA_EMAIL;
@@ -123,15 +128,36 @@ app.get('/api/finding-details', async (req, res) => {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
-    const result = issues
-      .filter(issue => {
-        const yearValue = issue.fields.customfield_16447;
-        const issueYear = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
-        const normalizedYear = issueYear === 'Unknown' ? 'Not Assigned' : issueYear;
-        const issueStatus = issue.fields.status.name;
+   const result = issues
+  .filter(issue => {
+    const yearValue = issue.fields.customfield_16447;
+    const issueYear = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
+    const normalizedYear = (issueYear === 'Unknown' ? 'Unknown' : issueYear)?.toString();
+  const issueStatus = issue.fields.status.name.toUpperCase();
+const queryStatus = status.toUpperCase();
 
-        return (year === 'all' && issueStatus === status) || (normalizedYear === year && issueStatus === status);
-      })
+
+  const isMatch =
+  (year?.toString() === 'all' && issueStatus === queryStatus) ||
+  (normalizedYear === year?.toString() && issueStatus === queryStatus);
+
+
+    // ✅ console.log buraya:
+    console.log({
+      yearQuery: year,
+      issueYearRaw: issueYear,
+      normalizedYear,
+      issueStatus,
+      match: isMatch
+    });
+
+    return isMatch;
+  })
+  .map(issue => ({
+    key: issue.key,
+    summary: issue.fields.summary
+  }));
+
       .map(issue => ({
         key: issue.key,
         summary: issue.fields.summary
@@ -319,7 +345,9 @@ const type = typeof typeField === 'object' && typeField?.value ? typeField.value
 });
 console.log('customfield_19636:', issue.fields.customfield_19636);
 
+
 // Server Start
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
+
 });
