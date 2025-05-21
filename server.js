@@ -12,6 +12,13 @@ const JIRA_EMAIL = process.env.JIRA_EMAIL;
 const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN;
 const PROJECT_KEY = process.env.PROJECT_KEY;
 
+console.log('Loaded environment variables:', {
+  JIRA_DOMAIN,
+  JIRA_EMAIL,
+  JIRA_API_TOKEN: JIRA_API_TOKEN?.substring(0, 6) + '***',
+  PROJECT_KEY
+});
+
 const authHeader = {
   headers: {
     Authorization: `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64')}`,
@@ -24,31 +31,40 @@ async function getAllIssues(jql) {
   let startAt = 0;
   let allIssues = [];
 
+  console.log('Executing JQL:', jql);
+
   while (true) {
     const url = `${JIRA_DOMAIN}/rest/api/3/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${maxResults}`;
-    const response = await axios.get(url, authHeader);
-    const { issues, total } = response.data;
+    console.log('Fetching URL:', url);
 
-    allIssues = allIssues.concat(issues);
-    if (allIssues.length >= total) break;
-
-    startAt += maxResults;
+    try {
+      const response = await axios.get(url, authHeader);
+      const { issues, total } = response.data;
+      allIssues = allIssues.concat(issues);
+      console.log(`Fetched ${issues.length} issues (Total so far: ${allIssues.length}/${total})`);
+      if (allIssues.length >= total) break;
+      startAt += maxResults;
+    } catch (error) {
+      console.error('Jira API error:', error?.response?.data || error.message);
+      throw error;
+    }
   }
 
   return allIssues;
 }
 
+// 🔹 Genel issue listesi
 app.get('/api/issues', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
     res.json({ issues });
   } catch (error) {
-    console.error(error?.response?.data || error.message);
     res.status(500).json({ error: 'Jira issues could not be fetched' });
   }
 });
 
+// 🔹 Audit Finding özeti (action sayısı ile)
 app.get('/api/finding-summary', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
@@ -70,11 +86,11 @@ app.get('/api/finding-summary', async (req, res) => {
 
     res.json(summary);
   } catch (error) {
-    console.error(error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to fetch finding summary' });
   }
 });
 
+// 🔹 Yıla ve statüye göre gruplanmış Audit Finding sayıları
 app.get('/api/finding-status-by-year', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
@@ -93,12 +109,11 @@ app.get('/api/finding-status-by-year', async (req, res) => {
 
     res.json(statusByYear);
   } catch (error) {
-    console.error(error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to calculate findings by year' });
   }
 });
 
-// 🔹 Yıla ve statüye göre veya yalnızca statüye göre detay listesi
+// 🔹 Detay listesi (yıla ve/veya statüye göre)
 app.get('/api/finding-details', async (req, res) => {
   const { year, status } = req.query;
 
@@ -130,11 +145,11 @@ app.get('/api/finding-details', async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error(error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to fetch finding details' });
   }
 });
 
+// 🔹 Statü bazlı dağılım (Pie chart için)
 app.get('/api/finding-status-distribution', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
@@ -148,11 +163,33 @@ app.get('/api/finding-status-distribution', async (req, res) => {
 
     res.json(statusCounts);
   } catch (error) {
-    console.error(error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to fetch status distribution' });
   }
 });
 
+// 🔹 Risk Scale by Project (Bubble Chart)
+app.get('/api/risk-scale-by-project', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
+
+    const projectRiskData = {};
+
+    issues.forEach(issue => {
+      const project = issue.fields.customfield_12126 || 'Unknown Project';
+      const risk = issue.fields.customfield_12557?.value || 'Unknown Risk';
+
+      if (!projectRiskData[project]) projectRiskData[project] = {};
+      projectRiskData[project][risk] = (projectRiskData[project][risk] || 0) + 1;
+    });
+
+    res.json(projectRiskData);
+  } catch (error) {
+    console.error('Risk scale fetch error:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch risk scale data' });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`Jira API Backend running at http://localhost:${PORT}`);
+  console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
 });
