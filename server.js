@@ -334,6 +334,32 @@ const type = typeof typeField === 'object' && typeField?.value ? typeField.value
   }
 });
 
+// 9. Findings filtered by Type and Risk
+app.get('/api/finding-details-by-type-and-risk', async (req, res) => {
+  const { type, risk } = req.query;
+  if (!type || !risk) return res.status(400).json({ error: 'Missing type or risk parameter' });
+
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
+
+    const result = issues.filter(issue => {
+      const typeField = issue.fields.customfield_19636;
+      const typeVal = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
+      const riskVal = issue.fields.customfield_12557?.value || 'Unassigned';
+      return typeVal === type && riskVal === risk;
+    }).map(issue => ({
+      key: issue.key,
+      summary: issue.fields.summary
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch filtered findings by type and risk' });
+  }
+});
+
+
 // Server Start
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
