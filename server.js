@@ -333,8 +333,6 @@ const type = typeof typeField === 'object' && typeField?.value ? typeField.value
     res.status(500).json({ error: 'Failed to fetch statistics by type and risk' });
   }
 });
-console.log('customfield_19636:', issue.fields.customfield_19636);
-
 
 // Server Start
 app.listen(PORT, () => {
