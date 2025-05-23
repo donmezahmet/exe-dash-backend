@@ -465,26 +465,18 @@ app.get('/api/finding-action-status-distribution', async (req, res) => {
   }
 });
 
-// Yeni API: Finding Actions - Status by Audit Lead
+// Yeni API: Finding Actions - Status by Audit Lead (Short Text Version)
 app.get('/api/finding-action-status-by-lead', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
 
-    // 🔍 Lead field değerlerini logla
-    issues.forEach(issue => {
-      console.log('>>> Issue:', issue.key, 'Lead Field:', JSON.stringify(issue.fields.customfield_12569, null, 2));
-    });
-
     const result = {};
 
     issues.forEach(issue => {
-      const leadField = issue.fields.customfield_12569;
-      const lead = leadField && typeof leadField === 'object' && leadField.displayName
-        ? leadField.displayName
-        : 'Unassigned';
-
-      const status = issue.fields.status.name || 'Unknown';
+      // Yeni short text field'dan lead'i alıyoruz
+      const lead = issue.fields.customfield_19770 || 'Unassigned';
+      const status = issue.fields.status?.name || 'Unknown';
 
       if (!result[lead]) result[lead] = {};
       if (!result[lead][status]) result[lead][status] = 0;
