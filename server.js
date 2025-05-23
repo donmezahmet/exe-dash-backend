@@ -483,7 +483,6 @@ app.get('/api/action-owners', async (req, res) => {
   }
 });
 
-// Yeni API: Finding Actions - Status by Audit Lead
 app.get('/api/finding-action-status-by-lead', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
@@ -491,11 +490,14 @@ app.get('/api/finding-action-status-by-lead', async (req, res) => {
 
     const result = {};
 
+    // 🔍 Her issue için lead bilgisini logla
     issues.forEach(issue => {
-     const leadField = issue.fields.customfield_12569;
-const lead = leadField && typeof leadField === 'object' && leadField.displayName
-  ? leadField.displayName
-  : 'Unassigned';
+      console.log('Issue:', issue.key, 'Lead Field:', issue.fields.customfield_12569);
+
+      const leadField = issue.fields.customfield_12569;
+      const lead = leadField && typeof leadField === 'object' && leadField.displayName
+        ? leadField.displayName
+        : 'Unassigned';
 
       const status = issue.fields.status.name || 'Unknown';
 
@@ -510,6 +512,7 @@ const lead = leadField && typeof leadField === 'object' && leadField.displayName
     res.status(500).json({ error: 'Failed to fetch status by audit lead' });
   }
 });
+
 
 
 // Server Start
