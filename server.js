@@ -98,13 +98,23 @@ app.get('/api/finding-summary', async (req, res) => {
 });
 
 // 3. Findings by Year and Status (Bar Chart)
+// === Yeni: Audit Type filtresi ile bar chart verisi ===
 app.get('/api/finding-status-by-year', async (req, res) => {
+  const { auditTypes } = req.query;
+
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
+    const selectedTypes = auditTypes ? auditTypes.split(',') : null;
+
     const statusByYear = {};
     issues.forEach(issue => {
+      const typeField = issue.fields.customfield_19767;
+      const auditType = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
+
+      if (selectedTypes && !selectedTypes.includes(auditType)) return;
+
       const yearValue = issue.fields.customfield_16447;
       const year = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
       const status = issue.fields.status.name;
