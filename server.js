@@ -171,12 +171,21 @@ const result = issues
 
 // 5. Status Distribution (Pie Chart)
 app.get('/api/finding-status-distribution', async (req, res) => {
+  const { auditTypes } = req.query;
+
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
+    const selectedTypes = auditTypes ? auditTypes.split(',') : null;
+
     const statusCounts = {};
     issues.forEach(issue => {
+      const typeField = issue.fields.customfield_19767;
+      const auditType = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
+
+      if (selectedTypes && !selectedTypes.includes(auditType)) return;
+
       const status = issue.fields.status.name;
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
@@ -186,6 +195,7 @@ app.get('/api/finding-status-distribution', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch status distribution' });
   }
 });
+
 
 // 6. Horizontal Risk View (Text-Based)
 app.get('/api/risk-scale-horizontal', async (req, res) => {
