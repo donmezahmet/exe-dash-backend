@@ -433,23 +433,34 @@ app.get('/api/finding-action-status-distribution', async (req, res) => {
   const { auditTypes } = req.query;
 
   try {
-    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
+    const jql = `project = ${PROJECT_KEY} AND (issuetype = "Audit Finding" OR issuetype = "Finding Action")`;
     const issues = await getAllIssues(jql);
 
     const selectedTypes = auditTypes ? auditTypes.split(',') : null;
 
+    const findings = issues.filter(issue => issue.fields.issuetype.name === 'Audit Finding');
+    const actions = issues.filter(issue => issue.fields.issuetype.name === 'Finding Action');
+
+    const findingMap = {};
+    findings.forEach(f => {
+      findingMap[f.key] = f;
+    });
+
     const statusCounts = {};
-    issues.forEach(issue => {
-      const parentType = issue.fields.parent?.fields?.customfield_19767?.value;
+    actions.forEach(action => {
+      const parentKey = action.fields.parent?.key;
+      const parentFinding = findingMap[parentKey];
+      const parentType = parentFinding?.fields?.customfield_19767?.value || null;
 
       if (selectedTypes && !selectedTypes.includes(parentType)) return;
 
-      const status = issue.fields.status.name;
+      const status = action.fields.status.name;
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
 
     res.json(statusCounts);
   } catch (error) {
+    console.error('Finding action distribution error:', error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to fetch finding action status distribution' });
   }
 });
