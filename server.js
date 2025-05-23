@@ -492,7 +492,11 @@ app.get('/api/finding-action-status-by-lead', async (req, res) => {
     const result = {};
 
     issues.forEach(issue => {
-      const lead = issue.fields.customfield_12569?.displayName || 'Unassigned';
+     const leadField = issue.fields.customfield_12569;
+const lead = leadField && typeof leadField === 'object' && leadField.displayName
+  ? leadField.displayName
+  : 'Unassigned';
+
       const status = issue.fields.status.name || 'Unknown';
 
       if (!result[lead]) result[lead] = {};
