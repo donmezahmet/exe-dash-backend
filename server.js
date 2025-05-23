@@ -428,15 +428,15 @@ app.get('/api/audit-countries', async (req, res) => {
   }
 });
 
+// === Yeni API: Finding Action - Status Distribution ===
 app.get('/api/finding-action-status-distribution', async (req, res) => {
-  const { auditTypes, actionOwners } = req.query;
+  const { auditTypes } = req.query;
 
   try {
     const jql = `project = ${PROJECT_KEY} AND (issuetype = "Audit Finding" OR issuetype = "Finding Action")`;
     const issues = await getAllIssues(jql);
 
     const selectedTypes = auditTypes ? auditTypes.split(',') : null;
-    const selectedOwners = actionOwners ? actionOwners.split(',') : null;
 
     const findings = issues.filter(issue => issue.fields.issuetype.name === 'Audit Finding');
     const actions = issues.filter(issue => issue.fields.issuetype.name === 'Finding Action');
@@ -452,11 +452,7 @@ app.get('/api/finding-action-status-distribution', async (req, res) => {
       const parentFinding = findingMap[parentKey];
       const parentType = parentFinding?.fields?.customfield_19767?.value || null;
 
-      // ✅ Yeni: actionOwner kontrolü
-      const ownerName = action.fields.customfield_12569?.displayName || null;
-
       if (selectedTypes && !selectedTypes.includes(parentType)) return;
-      if (selectedOwners && !selectedOwners.includes(ownerName)) return;
 
       const status = action.fields.status.name;
       statusCounts[status] = (statusCounts[status] || 0) + 1;
@@ -468,7 +464,6 @@ app.get('/api/finding-action-status-distribution', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch finding action status distribution' });
   }
 });
-
 
 // ✅ Audit Lead fetch
 app.get('/api/action-owners', async (req, res) => {
