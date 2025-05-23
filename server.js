@@ -469,12 +469,11 @@ app.get('/api/finding-action-status-distribution', async (req, res) => {
 app.get('/api/finding-action-status-by-lead', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
-    const issues = await getAllIssues(jql); // ← önce veriyi çekiyoruz
+    const issues = await getAllIssues(jql);
 
-    // 🔍 Her issue için lead bilgisini logla
+    // 🔍 Lead field değerlerini logla
     issues.forEach(issue => {
-      console.log('>>> Issue:', issue.key);
-      console.log('>>> Audit Lead Field Value:', JSON.stringify(issue.fields.customfield_12569, null, 2));
+      console.log('>>> Issue:', issue.key, 'Lead Field:', JSON.stringify(issue.fields.customfield_12569, null, 2));
     });
 
     const result = {};
@@ -498,6 +497,7 @@ app.get('/api/finding-action-status-by-lead', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch status by audit lead' });
   }
 });
+
 
 
 
