@@ -428,6 +428,24 @@ app.get('/api/audit-countries', async (req, res) => {
   }
 });
 
+// === Yeni API: Finding Action - Status Distribution ===
+app.get('/api/finding-action-status-distribution', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
+    const issues = await getAllIssues(jql);
+
+    const statusCounts = {};
+    issues.forEach(issue => {
+      const status = issue.fields.status.name;
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+    res.json(statusCounts);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch finding action status distribution' });
+  }
+});
+
 
 // Server Start
 app.listen(PORT, () => {
