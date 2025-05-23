@@ -483,6 +483,30 @@ app.get('/api/action-owners', async (req, res) => {
   }
 });
 
+// Yeni API: Finding Actions - Status by Audit Lead
+app.get('/api/finding-action-status-by-lead', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
+    const issues = await getAllIssues(jql);
+
+    const result = {};
+
+    issues.forEach(issue => {
+      const lead = issue.fields.customfield_12569?.displayName || 'Unassigned';
+      const status = issue.fields.status.name || 'Unknown';
+
+      if (!result[lead]) result[lead] = {};
+      if (!result[lead][status]) result[lead][status] = 0;
+      result[lead][status]++;
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching status by audit lead:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch status by audit lead' });
+  }
+});
+
 
 // Server Start
 app.listen(PORT, () => {
