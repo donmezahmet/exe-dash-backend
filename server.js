@@ -465,35 +465,21 @@ app.get('/api/finding-action-status-distribution', async (req, res) => {
   }
 });
 
-// ✅ Audit Lead fetch
-app.get('/api/action-owners', async (req, res) => {
-  try {
-    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
-    const issues = await getAllIssues(jql);
-
-    const owners = new Set();
-    issues.forEach(issue => {
-      const user = issue.fields.customfield_12569;
-      if (user?.displayName) owners.add(user.displayName);
-    });
-
-    res.json(Array.from(owners).sort());
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch action owners' });
-  }
-});
-
+// Yeni API: Finding Actions - Status by Audit Lead
 app.get('/api/finding-action-status-by-lead', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
-    const issues = await getAllIssues(jql);
-
-    const result = {};
+    const issues = await getAllIssues(jql); // ← önce veriyi çekiyoruz
 
     // 🔍 Her issue için lead bilgisini logla
     issues.forEach(issue => {
-      console.log('Issue:', issue.key, 'Lead Field:', issue.fields.customfield_12569);
+      console.log('>>> Issue:', issue.key);
+      console.log('>>> Audit Lead Field Value:', JSON.stringify(issue.fields.customfield_12569, null, 2));
+    });
 
+    const result = {};
+
+    issues.forEach(issue => {
       const leadField = issue.fields.customfield_12569;
       const lead = leadField && typeof leadField === 'object' && leadField.displayName
         ? leadField.displayName
@@ -512,6 +498,7 @@ app.get('/api/finding-action-status-by-lead', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch status by audit lead' });
   }
 });
+
 
 
 
