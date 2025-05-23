@@ -99,21 +99,26 @@ app.get('/api/finding-summary', async (req, res) => {
 
 // 3. Findings by Year and Status (Bar Chart)
 // === Yeni: Audit Type filtresi ile bar chart verisi ===
+// === Güncellenmiş API: Findings by Year and Status (Bar Chart) ===
 app.get('/api/finding-status-by-year', async (req, res) => {
-  const { auditTypes } = req.query;
+  const { auditTypes, auditCountries } = req.query;
 
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
     const selectedTypes = auditTypes ? auditTypes.split(',') : null;
+    const selectedCountries = auditCountries ? auditCountries.split(',') : null;
 
     const statusByYear = {};
     issues.forEach(issue => {
       const typeField = issue.fields.customfield_19767;
       const auditType = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
+      const countryField = issue.fields.customfield_19769;
+      const auditCountry = typeof countryField === 'object' && countryField?.value ? countryField.value : 'Unassigned';
 
       if (selectedTypes && !selectedTypes.includes(auditType)) return;
+      if (selectedCountries && !selectedCountries.includes(auditCountry)) return;
 
       const yearValue = issue.fields.customfield_16447;
       const year = typeof yearValue === 'object' && yearValue?.value ? yearValue.value : (yearValue || 'Unknown');
@@ -398,6 +403,27 @@ app.get('/api/audit-types', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch audit types' });
   }
 });
+
+// === Yeni API: Benzersiz Country değerlerini getir ===
+app.get('/api/audit-countries', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
+
+    const countries = new Set();
+    issues.forEach(issue => {
+      const countryField = issue.fields.customfield_19769;
+      const country = typeof countryField === 'object' && countryField?.value ? countryField.value : null;
+      if (country) countries.add(country);
+    });
+
+    res.json(Array.from(countries).sort());
+  } catch (error) {
+    console.error('Failed to fetch audit countries:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch audit countries' });
+  }
+});
+
 
 // Server Start
 app.listen(PORT, () => {
