@@ -369,6 +369,25 @@ app.get('/api/finding-details-by-type-and-risk', async (req, res) => {
   }
 });
 
+// 10. Audit Types – Jira'daki dropdown'dan unique audit type listesi getir
+app.get('/api/audit-types', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
+
+    const types = new Set();
+    issues.forEach(issue => {
+      const typeField = issue.fields.customfield_19767;
+      const type = typeof typeField === 'object' && typeField?.value ? typeField.value : null;
+      if (type) types.add(type);
+    });
+
+    res.json(Array.from(types).sort());
+  } catch (error) {
+    console.error('Failed to fetch audit types:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch audit types' });
+  }
+});
 
 // Server Start
 app.listen(PORT, () => {
