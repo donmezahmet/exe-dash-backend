@@ -491,8 +491,8 @@ app.get('/api/finding-action-status-by-lead', async (req, res) => {
 });
 
 
-// ✅ Internal Audit Plan - Audit Projects Data
-app.get('/api/iap-audit-projects', async (req, res) => {
+// ✅ Yeni API alias: /api/yearly-audit-plan
+app.get('/api/yearly-audit-plan', async (req, res) => {
   const IAP_PROJECT_KEY = 'IAP';
 
   try {
@@ -513,17 +513,14 @@ app.get('/api/iap-audit-projects', async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Error fetching IAP Audit Projects:', error?.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to fetch IAP audit project data' });
+    console.error('Error fetching Yearly Audit Plan data:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch Yearly Audit Plan data' });
   }
 });
 
-// ✅ Yeni alias endpoint: /api/yearly-audit-plan → /api/iap-audit-projects yönlendirmesi yapar
-app.get('/api/yearly-audit-plan', (req, res) => {
-  res.redirect('/api/iap-audit-projects');
-});
 
 // Server Start
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
 });
+
