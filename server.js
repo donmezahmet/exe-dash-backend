@@ -491,6 +491,32 @@ app.get('/api/finding-action-status-by-lead', async (req, res) => {
 });
 
 
+// ✅ Internal Audit Plan - Audit Projects Data
+app.get('/api/iap-audit-projects', async (req, res) => {
+  const IAP_PROJECT_KEY = 'IAP';
+
+  try {
+    const jql = `project = ${IAP_PROJECT_KEY} AND issuetype = "Audit Project" ORDER BY created DESC`;
+    const issues = await getAllIssues(jql);
+
+    const result = issues.map(issue => ({
+      key: issue.key,
+      summary: issue.fields.summary,
+      durationWeeks: issue.fields.customfield_19800 || null,
+      auditType: issue.fields.customfield_19801?.value || 'Unassigned',
+      auditLead: issue.fields.customfield_19803 || 'Unassigned',
+      auditYear: typeof issue.fields.customfield_16447 === 'object'
+        ? issue.fields.customfield_16447?.value
+        : issue.fields.customfield_16447 || 'Unknown',
+      status: issue.fields.status?.name || 'Unknown'
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching IAP Audit Projects:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch IAP audit project data' });
+  }
+});
 
 
 
