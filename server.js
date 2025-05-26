@@ -499,17 +499,30 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
     const jql = `project = ${IAP_PROJECT_KEY} AND issuetype = "Audit Project" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
-    const result = issues.map(issue => ({
-      key: issue.key,
-      summary: issue.fields.summary,
-      durationWeeks: issue.fields.customfield_19800 || null,
-      auditType: issue.fields.customfield_19801?.value || 'Unassigned',
-      auditLead: issue.fields.customfield_19803 || 'Unassigned',
-      auditYear: typeof issue.fields.customfield_16447 === 'object'
-        ? issue.fields.customfield_16447?.value
-        : issue.fields.customfield_16447 || 'Unknown',
-      status: issue.fields.status?.name || 'Unknown'
-    }));
+    const result = issues.map(issue => {
+      const status = issue.fields.status?.name || 'Unknown';
+      const statusMap = {
+        'Planned': 1,
+        'Fieldwork': 2,
+        'Reporting': 3,
+        'Completed': 4
+      };
+      const currentLevel = statusMap[status] || 1;
+
+      return {
+        key: issue.key,
+        summary: issue.fields.summary,
+        auditYear: typeof issue.fields.customfield_16447 === 'object'
+          ? issue.fields.customfield_16447?.value
+          : issue.fields.customfield_16447 || 'Unknown',
+        progress: {
+          'Planned': currentLevel >= 1 ? 1 : 0,
+          'Fieldwork': currentLevel >= 2 ? 1 : 0,
+          'Reporting': currentLevel >= 3 ? 1 : 0,
+          'Completed': currentLevel >= 4 ? 1 : 0
+        }
+      };
+    });
 
     res.json(result);
   } catch (error) {
