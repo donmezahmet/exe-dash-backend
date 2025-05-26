@@ -515,6 +515,7 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
         auditYear: typeof issue.fields.customfield_16447 === 'object'
           ? issue.fields.customfield_16447?.value
           : issue.fields.customfield_16447 || 'Unknown',
+        auditLead: issue.fields.customfield_19803 || 'Unknown',
         progressLevel: currentLevel,
         statusLabel: status
       };
