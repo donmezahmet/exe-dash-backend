@@ -518,10 +518,12 @@ app.get('/api/iap-audit-projects', async (req, res) => {
   }
 });
 
-
+// ✅ Yeni alias endpoint: /api/yearly-audit-plan → /api/iap-audit-projects yönlendirmesi yapar
+app.get('/api/yearly-audit-plan', (req, res) => {
+  res.redirect('/api/iap-audit-projects');
+});
 
 // Server Start
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
-
 });
