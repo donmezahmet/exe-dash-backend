@@ -26,7 +26,7 @@ console.log('Loaded environment variables:', {
 
 const authHeader = {
   headers: {
-    Authorization: Basic ${Buffer.from(${JIRA_EMAIL}:${JIRA_API_TOKEN}).toString('base64')},
+    Authorization: `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64')}`,
     Accept: 'application/json'
   }
 };
@@ -39,14 +39,14 @@ async function getAllIssues(jql) {
   console.log('Executing JQL:', jql);
 
   while (true) {
-    const url = ${JIRA_DOMAIN}/rest/api/3/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${maxResults};
+    const url = `${JIRA_DOMAIN}/rest/api/3/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${maxResults}`;
     console.log('Fetching URL:', url);
 
     try {
       const response = await axios.get(url, authHeader);
       const { issues, total } = response.data;
       allIssues = allIssues.concat(issues);
-      console.log(Fetched ${issues.length} issues (Total so far: ${allIssues.length}/${total}));
+      console.log(`Fetched ${issues.length} issues (Total so far: ${allIssues.length}/${total})`);
       if (allIssues.length >= total) break;
       startAt += maxResults;
     } catch (error) {
@@ -63,7 +63,7 @@ async function getAllIssues(jql) {
 // 1. General Issue List
 app.get('/api/issues', async (req, res) => {
   try {
-    const jql = project = ${PROJECT_KEY} ORDER BY created DESC;
+    const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
     res.json({ issues });
   } catch (error) {
@@ -74,7 +74,7 @@ app.get('/api/issues', async (req, res) => {
 // 2. Audit Finding Summary with Action Count
 app.get('/api/finding-summary', async (req, res) => {
   try {
-    const jql = project = ${PROJECT_KEY} ORDER BY created DESC;
+    const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
     const findings = issues.filter(issue => issue.fields.issuetype.name === 'Audit Finding');
@@ -104,7 +104,7 @@ app.get('/api/finding-status-by-year', async (req, res) => {
   const { auditTypes, auditCountries } = req.query;
 
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC;
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
     const selectedTypes = auditTypes ? auditTypes.split(',') : null;
@@ -140,7 +140,7 @@ app.get('/api/finding-details', async (req, res) => {
   if (!status) return res.status(400).json({ error: 'Missing status parameter' });
 
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC;
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
 const result = issues
@@ -179,7 +179,7 @@ app.get('/api/finding-status-distribution', async (req, res) => {
   const { auditTypes, auditCountries } = req.query;
 
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding";
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
     const selectedTypes = auditTypes ? auditTypes.split(',') : null;
@@ -209,7 +209,7 @@ app.get('/api/finding-status-distribution', async (req, res) => {
 // 6. Horizontal Risk View (Text-Based)
 app.get('/api/risk-scale-horizontal', async (req, res) => {
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding";
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
     const data = {};
@@ -233,7 +233,7 @@ app.get('/api/risk-scale-horizontal', async (req, res) => {
 // 7. Internal Control Element × Risk Level Table
 app.get('/api/statistics-by-control-and-risk', async (req, res) => {
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding";
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
     const result = {};
@@ -290,7 +290,7 @@ app.get('/api/finding-details-by-control-and-risk', async (req, res) => {
   if (!control || !risk) return res.status(400).json({ error: 'Missing control or risk parameter' });
 
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding";
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
     const result = issues.filter(issue => {
@@ -311,7 +311,7 @@ app.get('/api/finding-details-by-control-and-risk', async (req, res) => {
 
 app.get('/api/statistics-by-type-and-risk', async (req, res) => {
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding";
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
     const result = {};
@@ -369,7 +369,7 @@ app.get('/api/finding-details-by-type-and-risk', async (req, res) => {
   if (!type || !risk) return res.status(400).json({ error: 'Missing type or risk parameter' });
 
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding";
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
     const result = issues.filter(issue => {
@@ -391,7 +391,7 @@ app.get('/api/finding-details-by-type-and-risk', async (req, res) => {
 // 10. Audit Types – Jira'daki dropdown'dan unique audit type listesi getir
 app.get('/api/audit-types', async (req, res) => {
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding";
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
     const types = new Set();
@@ -411,7 +411,7 @@ app.get('/api/audit-types', async (req, res) => {
 // === Yeni API: Benzersiz Country değerlerini getir ===
 app.get('/api/audit-countries', async (req, res) => {
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Audit Finding";
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
     const countries = new Set();
@@ -433,7 +433,7 @@ app.get('/api/finding-action-status-distribution', async (req, res) => {
   const { auditTypes } = req.query;
 
   try {
-    const jql = project = ${PROJECT_KEY} AND (issuetype = "Audit Finding" OR issuetype = "Finding Action");
+    const jql = `project = ${PROJECT_KEY} AND (issuetype = "Audit Finding" OR issuetype = "Finding Action")`;
     const issues = await getAllIssues(jql);
 
     const selectedTypes = auditTypes ? auditTypes.split(',') : null;
@@ -468,7 +468,7 @@ app.get('/api/finding-action-status-distribution', async (req, res) => {
 // Yeni API: Finding Actions - Status by Audit Lead (Short Text Version)
 app.get('/api/finding-action-status-by-lead', async (req, res) => {
   try {
-    const jql = project = ${PROJECT_KEY} AND issuetype = "Finding Action";
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
 
     const result = {};
@@ -495,7 +495,7 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
   const IAP_PROJECT_KEY = 'IAP';
 
   try {
-    const jql = project = ${IAP_PROJECT_KEY} AND issuetype = "Audit Project" ORDER BY created DESC;
+    const jql = `project = ${IAP_PROJECT_KEY} AND issuetype = "Audit Project" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
     const statusMap = {
@@ -515,7 +515,6 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
         auditYear: typeof issue.fields.customfield_16447 === 'object'
           ? issue.fields.customfield_16447?.value
           : issue.fields.customfield_16447 || 'Unknown',
-        auditLead: issue.fields.customfield_19803 || 'Unknown',
         progressLevel: currentLevel,
         statusLabel: status
       };
@@ -531,5 +530,7 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
 
 // Server Start
 app.listen(PORT, () => {
-  console.log(✅ Jira API Backend running at http://localhost:${PORT});
+  console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
 });
+
+
