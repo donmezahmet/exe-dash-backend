@@ -499,15 +499,16 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
     const jql = `project = ${IAP_PROJECT_KEY} AND issuetype = "Audit Project" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
+    const statusMap = {
+      'Planned': 1,
+      'Fieldwork': 2,
+      'Reporting': 3,
+      'Completed': 4
+    };
+
     const result = issues.map(issue => {
       const status = issue.fields.status?.name || 'Unknown';
-      const statusMap = {
-        'Planned': 1,
-        'Fieldwork': 2,
-        'Reporting': 3,
-        'Completed': 4
-      };
-      const currentLevel = statusMap[status] || 1;
+      const currentLevel = statusMap[status] || 0;
 
       return {
         key: issue.key,
@@ -515,12 +516,7 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
         auditYear: typeof issue.fields.customfield_16447 === 'object'
           ? issue.fields.customfield_16447?.value
           : issue.fields.customfield_16447 || 'Unknown',
-        progress: {
-          'Planned': currentLevel >= 1 ? 1 : 0,
-          'Fieldwork': currentLevel >= 2 ? 1 : 0,
-          'Reporting': currentLevel >= 3 ? 1 : 0,
-          'Completed': currentLevel >= 4 ? 1 : 0
-        }
+        progressLevel: currentLevel
       };
     });
 
@@ -536,4 +532,5 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
 });
+
 
