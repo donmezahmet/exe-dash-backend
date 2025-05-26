@@ -490,7 +490,6 @@ app.get('/api/finding-action-status-by-lead', async (req, res) => {
   }
 });
 
-
 // ✅ Yeni API alias: /api/yearly-audit-plan
 app.get('/api/yearly-audit-plan', async (req, res) => {
   const IAP_PROJECT_KEY = 'IAP';
