@@ -107,7 +107,9 @@ app.get('/api/finding-status-by-year', async (req, res) => {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
-    const selectedTypes = auditTypes ? auditTypes.split(',') : null;
+    const selectedTypes = Array.isArray(auditTypes)
+  ? auditTypes
+  : auditTypes ? [auditTypes] : null;
     const selectedCountries = auditCountries ? auditCountries.split(',') : null;
 
     const statusByYear = {};
