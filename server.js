@@ -530,6 +530,44 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
   }
 });
 
+app.get('/api/finding-action-age-by-lead', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
+    const issues = await getAllIssues(jql);
+
+    const result = {};
+    const now = new Date();
+
+    issues.forEach(issue => {
+      const lead = issue.fields.customfield_19770 || 'Unassigned';
+      const dueDateStr = issue.fields.duedate;
+
+      if (!dueDateStr) return;
+
+      const dueDate = new Date(dueDateStr);
+      const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+
+      let bucket = '';
+      if (ageDays <= 30) bucket = '0–30';
+      else if (ageDays <= 90) bucket = '30–90';
+      else if (ageDays <= 180) bucket = '90–180';
+      else if (ageDays <= 360) bucket = '180–360';
+      else if (ageDays <= 720) bucket = '360–720';
+      else bucket = '720+';
+
+      if (!result[lead]) result[lead] = {};
+      if (!result[lead][bucket]) result[lead][bucket] = 0;
+      result[lead][bucket]++;
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error calculating action age by lead:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to calculate action age by lead' });
+  }
+});
+
+
 
 // Server Start
 app.listen(PORT, () => {
