@@ -539,6 +539,9 @@ app.get('/api/finding-action-age-by-lead', async (req, res) => {
     const now = new Date();
 
     issues.forEach(issue => {
+      const status = issue.fields.status?.name?.toUpperCase();
+      if (status === 'COMPLETED' || status === 'RISK ACCEPTED') return; // ❌ Hariç tutulan statüler
+
       const lead = issue.fields.customfield_19770 || 'Unassigned';
       const dueDateStr = issue.fields.duedate;
 
@@ -566,6 +569,7 @@ app.get('/api/finding-action-age-by-lead', async (req, res) => {
     res.status(500).json({ error: 'Failed to calculate action age by lead' });
   }
 });
+
 
 
 
