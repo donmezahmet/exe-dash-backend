@@ -537,7 +537,13 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
 
-    const now = new Date();
+    // Saat kısmını sıfırla
+    function resetTime(date) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    const now = resetTime(new Date());
+
     const result = {
       '-720–-360': 0,
       '-360–-180': 0,
@@ -559,16 +565,15 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
         if (leadValue !== leadFilter) return;
       }
 
-     const status = issue.fields.status?.name?.toUpperCase();
-if (['COMPLETED', 'RISK ACCEPTED', 'CLOSED'].includes(status)) return;
-
+      const status = issue.fields.status?.name?.toUpperCase();
+      if (['COMPLETED', 'RISK ACCEPTED', 'CLOSED'].includes(status)) return;
 
       const revisedDueDateStr = issue.fields.customfield_12129;
       const dueDateStr = issue.fields.duedate;
       const useDateStr = revisedDueDateStr || dueDateStr;
       if (!useDateStr) return;
 
-      const dueDate = new Date(useDateStr);
+      const dueDate = resetTime(new Date(useDateStr));
       const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
 
       let bucket = null;
@@ -584,17 +589,20 @@ if (['COMPLETED', 'RISK ACCEPTED', 'CLOSED'].includes(status)) return;
       else if (ageDays <= 720) bucket = '360–720';
       else bucket = '720+';
 
-     if (bucket) {
-    console.log({
-      key: issue.key,
-      revised: revisedDueDateStr,
-      original: dueDateStr,
-      used: useDateStr,
-      ageDays,
-      bucket
-    });
-    result[bucket]++;
-  }
+      if (bucket) {
+        console.log({
+          key: issue.key,
+          revised: revisedDueDateStr,
+          original: dueDateStr,
+          used: useDateStr,
+          now: now.toISOString().split('T')[0],
+          dueDate: dueDate.toISOString().split('T')[0],
+          ageDays,
+          bucket
+        });
+
+        result[bucket]++;
+      }
     });
 
     res.json(result);
