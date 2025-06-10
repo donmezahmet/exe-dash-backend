@@ -530,45 +530,61 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
   }
 });
 
-app.get('/api/finding-action-age-by-lead', async (req, res) => {
+app.get('/api/finding-action-age-summary', async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
 
-    const result = {};
     const now = new Date();
+    const result = {
+      '-720–-360': 0,
+      '-360–-180': 0,
+      '-180–-90': 0,
+      '-90–-30': 0,
+      '-30–0': 0,
+      '0–30': 0,
+      '30–90': 0,
+      '90–180': 0,
+      '180–360': 0,
+      '360–720': 0,
+      '720+': 0
+    };
 
     issues.forEach(issue => {
       const status = issue.fields.status?.name?.toUpperCase();
-      if (status === 'COMPLETED' || status === 'RISK ACCEPTED') return; // ❌ Hariç tutulan statüler
+      if (status === 'COMPLETED' || status === 'RISK ACCEPTED') return;
 
-      const lead = issue.fields.customfield_19770 || 'Unassigned';
+      const revisedDueDateStr = issue.fields.customfield_12129;
       const dueDateStr = issue.fields.duedate;
+      const useDateStr = revisedDueDateStr || dueDateStr;
+      if (!useDateStr) return;
 
-      if (!dueDateStr) return;
+      const dueDate = new Date(useDateStr);
+      const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24)); // pozitifse geçmiş, negatifse gelecekte
 
-      const dueDate = new Date(dueDateStr);
-      const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
-
-      let bucket = '';
-      if (ageDays <= 30) bucket = '0–30';
+      let bucket = null;
+      if (ageDays <= -360 && ageDays > -720) bucket = '-720–-360';
+      else if (ageDays <= -180 && ageDays > -360) bucket = '-360–-180';
+      else if (ageDays <= -90 && ageDays > -180) bucket = '-180–-90';
+      else if (ageDays <= -30 && ageDays > -90) bucket = '-90–-30';
+      else if (ageDays <= 0 && ageDays > -30) bucket = '-30–0';
+      else if (ageDays <= 30) bucket = '0–30';
       else if (ageDays <= 90) bucket = '30–90';
       else if (ageDays <= 180) bucket = '90–180';
       else if (ageDays <= 360) bucket = '180–360';
       else if (ageDays <= 720) bucket = '360–720';
       else bucket = '720+';
 
-      if (!result[lead]) result[lead] = {};
-      if (!result[lead][bucket]) result[lead][bucket] = 0;
-      result[lead][bucket]++;
+      if (bucket) result[bucket]++;
     });
 
     res.json(result);
   } catch (error) {
-    console.error('Error calculating action age by lead:', error?.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to calculate action age by lead' });
+    console.error('Error generating action age summary:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to generate action age summary' });
   }
 });
+
 
 
 
