@@ -602,22 +602,24 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
       else if (ageDays <= 720) bucket = '360–720';
       else bucket = '720+';
 
-      if (bucket) {
-        console.log({
-          key: issue.key,
-          status,
-          revised: revisedDueDateStr,
-          original: dueDateStr,
-          used: rawDateStr,
-          converted: isoDateStr,
-          dueDate: dueDate.toISOString().split('T')[0],
-          now: now.toISOString().split('T')[0],
-          ageDays,
-          bucket
-        });
+if (bucket) {
+  if (bucket === '180–360') {
+    console.log('🔍 180–360 bucketına giren issue:', {
+      key: issue.key,
+      status,
+      revised: revisedDueDateStr,
+      original: dueDateStr,
+      used: rawDateStr,
+      converted: isoDateStr,
+      dueDate: dueDate.toISOString().split('T')[0],
+      now: now.toISOString().split('T')[0],
+      ageDays,
+      bucket
+    });
+  }
 
-        result[bucket]++;
-      }
+  result[bucket]++;
+}
     });
 
     res.json(result);
