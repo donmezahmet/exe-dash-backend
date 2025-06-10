@@ -584,7 +584,17 @@ if (['COMPLETED', 'RISK ACCEPTED', 'CLOSED'].includes(status)) return;
       else if (ageDays <= 720) bucket = '360–720';
       else bucket = '720+';
 
-      if (bucket) result[bucket]++;
+     if (bucket) {
+    console.log({
+      key: issue.key,
+      revised: revisedDueDateStr,
+      original: dueDateStr,
+      used: useDateStr,
+      ageDays,
+      bucket
+    });
+    result[bucket]++;
+  }
     });
 
     res.json(result);
