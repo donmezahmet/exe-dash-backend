@@ -559,8 +559,9 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
         if (leadValue !== leadFilter) return;
       }
 
-      const status = issue.fields.status?.name?.toUpperCase();
-      if (status === 'COMPLETED' || status === 'RISK ACCEPTED') return;
+     const status = issue.fields.status?.name?.toUpperCase();
+if (['COMPLETED', 'RISK ACCEPTED', 'CLOSED'].includes(status)) return;
+
 
       const revisedDueDateStr = issue.fields.customfield_12129;
       const dueDateStr = issue.fields.duedate;
