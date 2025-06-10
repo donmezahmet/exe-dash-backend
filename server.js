@@ -560,7 +560,7 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
       }
 
       const status = issue.fields.status?.name?.toUpperCase();
-      if (status === 'COMPLETED' || status === 'RISK ACCEPTED' || status === 'CLOSED' ) return;
+      if (status === 'COMPLETED' || status === 'RISK ACCEPTED') return;
 
       const revisedDueDateStr = issue.fields.customfield_12129;
       const dueDateStr = issue.fields.duedate;
