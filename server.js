@@ -537,9 +537,16 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
 
-    // Saat kısmını sıfırla
+    // Yardımcı fonksiyon: Saat kısmını sıfırlar
     function resetTime(date) {
       return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    // Yardımcı fonksiyon: MM/DD/YYYY formatını ISO'ya çevir
+    function parseUSDateToISO(dateStr) {
+      if (!dateStr || !dateStr.includes('/')) return dateStr; // zaten ISO ise dokunma
+      const [month, day, year] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
 
     const now = resetTime(new Date());
@@ -559,26 +566,29 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     };
 
     issues.forEach(issue => {
-      // Lead filtresi varsa uygula
+      // 🎯 Lead filtresi uygula
       if (leadFilter) {
         const leadField = issue.fields.customfield_19770;
         const leadValue = typeof leadField === 'string' ? leadField.trim() : '';
         if (leadValue !== leadFilter) return;
       }
 
+      // ⛔ Status kontrolü: sadece aktif olanlar
       const status = issue.fields.status?.name?.toUpperCase();
-
-      // 🔍 Sadece OPEN, OVERDUE ve DELAYED statülerini dahil et
       if (!['OPEN', 'OVERDUE', 'DELAYED'].includes(status)) return;
 
       const revisedDueDateStr = issue.fields.customfield_12129;
       const dueDateStr = issue.fields.duedate;
-      const useDateStr = revisedDueDateStr || dueDateStr;
-      if (!useDateStr) return;
+      const rawDateStr = revisedDueDateStr || dueDateStr;
+      if (!rawDateStr) return;
 
-      const dueDate = resetTime(new Date(useDateStr));
+      // 🎯 Tarih formatı dönüşüm
+      const isoDateStr = parseUSDateToISO(rawDateStr);
+      const dueDate = resetTime(new Date(isoDateStr));
+
       const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
 
+      // 📊 Bucket belirleme
       let bucket = null;
       if (ageDays <= -360 && ageDays > -720) bucket = '-720–-360';
       else if (ageDays <= -180 && ageDays > -360) bucket = '-360–-180';
@@ -595,11 +605,13 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
       if (bucket) {
         console.log({
           key: issue.key,
+          status,
           revised: revisedDueDateStr,
           original: dueDateStr,
-          used: useDateStr,
-          now: now.toISOString().split('T')[0],
+          used: rawDateStr,
+          converted: isoDateStr,
           dueDate: dueDate.toISOString().split('T')[0],
+          now: now.toISOString().split('T')[0],
           ageDays,
           bucket
         });
