@@ -559,6 +559,7 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     };
 
     issues.forEach(issue => {
+      // Lead filtresi varsa uygula
       if (leadFilter) {
         const leadField = issue.fields.customfield_19770;
         const leadValue = typeof leadField === 'string' ? leadField.trim() : '';
@@ -566,7 +567,9 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
       }
 
       const status = issue.fields.status?.name?.toUpperCase();
-      if (['COMPLETED', 'RISK ACCEPTED', 'CLOSED'].includes(status)) return;
+
+      // 🔍 Sadece OPEN, OVERDUE ve DELAYED statülerini dahil et
+      if (!['OPEN', 'OVERDUE', 'DELAYED'].includes(status)) return;
 
       const revisedDueDateStr = issue.fields.customfield_12129;
       const dueDateStr = issue.fields.duedate;
