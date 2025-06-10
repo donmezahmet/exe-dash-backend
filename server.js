@@ -532,6 +532,8 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
 
 app.get('/api/finding-action-age-summary', async (req, res) => {
   try {
+    const leadFilter = req.query.lead;
+
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
 
@@ -551,6 +553,12 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     };
 
     issues.forEach(issue => {
+      if (leadFilter) {
+        const leadField = issue.fields.customfield_19770;
+        const leadValue = typeof leadField === 'string' ? leadField.trim() : '';
+        if (leadValue !== leadFilter) return;
+      }
+
       const status = issue.fields.status?.name?.toUpperCase();
       if (status === 'COMPLETED' || status === 'RISK ACCEPTED') return;
 
@@ -560,7 +568,7 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
       if (!useDateStr) return;
 
       const dueDate = new Date(useDateStr);
-      const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24)); // pozitifse geçmiş, negatifse gelecekte
+      const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
 
       let bucket = null;
       if (ageDays <= -360 && ageDays > -720) bucket = '-720–-360';
