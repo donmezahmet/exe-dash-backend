@@ -784,6 +784,7 @@ app.get('/api/finding-actions-basic', async (req, res) => {
     });
 
     const result = await response.json();
+    console.log("JIRA RESPONSE", result); 
     const mapped = result.issues.map(issue => ({
       auditName: issue.fields.customfield_12126 || 'N/A',
       status: issue.fields.status?.name || 'Unknown'
