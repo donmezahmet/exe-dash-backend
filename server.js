@@ -690,6 +690,49 @@ app.get('/api/investigation-counts', async (req, res) => {
   }
 });
 
+// Yeni API: Risk dağılımı – Audit Project bazlı
+app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
+
+    const riskLevels = ['Critical', 'High', 'Medium', 'Low'];
+    const result = {};
+    const auditProjects = new Set();
+
+    issues.forEach(issue => {
+      const projectName = issue.fields.customfield_12126 || 'Unassigned';
+      const risk = issue.fields.customfield_12557?.value || 'Unassigned';
+
+      auditProjects.add(projectName);
+
+      if (!result[projectName]) {
+        result[projectName] = {};
+      }
+
+      if (!result[projectName][risk]) {
+        result[projectName][risk] = 0;
+      }
+
+      result[projectName][risk]++;
+    });
+
+    // Bar chart formatına dönüştür
+    const formatted = Array.from(auditProjects).map(project => {
+      const row = { project };
+      riskLevels.forEach(level => {
+        row[level] = result[project]?.[level] || 0;
+      });
+      return row;
+    });
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error in finding-risk-distribution-by-project:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch risk distribution by project' });
+  }
+});
+
 
 // Server Start
 app.listen(PORT, () => {
