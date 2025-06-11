@@ -176,7 +176,6 @@ const result = issues
   }
 });
 
-// 5. Status Distribution (Pie Chart)
 app.get('/api/finding-status-distribution', async (req, res) => {
   const { auditTypes, auditCountries } = req.query;
 
@@ -188,24 +187,44 @@ app.get('/api/finding-status-distribution', async (req, res) => {
     const selectedCountries = auditCountries ? auditCountries.split(',') : null;
 
     const statusCounts = {};
+    const byAudit = {}; // 👈 Audit name bazlı status sayımları
+
     issues.forEach(issue => {
       const typeField = issue.fields.customfield_19767;
       const auditType = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
+
       const countryField = issue.fields.customfield_19769;
       const auditCountry = typeof countryField === 'object' && countryField?.value ? countryField.value : 'Unassigned';
+
+      const auditName = issue.fields.customfield_12126 || 'Unassigned';
+      const status = issue.fields.status.name;
 
       if (selectedTypes && !selectedTypes.includes(auditType)) return;
       if (selectedCountries && !selectedCountries.includes(auditCountry)) return;
 
-      const status = issue.fields.status.name;
+      // ✅ Pie chart için: status bazlı toplam
       statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+      // ✅ Audit name bazlı gruplama
+      if (!byAudit[auditName]) byAudit[auditName] = {};
+      if (!byAudit[auditName][status]) byAudit[auditName][status] = 0;
+      byAudit[auditName][status]++;
     });
 
-    res.json(statusCounts);
+    // JSON response
+    res.json({
+      totals: statusCounts,
+      byAudit: Object.entries(byAudit).map(([audit, statusMap]) => ({
+        audit,
+        ...statusMap
+      }))
+    });
   } catch (error) {
+    console.error('Failed to fetch status distribution:', error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to fetch status distribution' });
   }
 });
+
 
 
 // 6. Horizontal Risk View (Text-Based)
