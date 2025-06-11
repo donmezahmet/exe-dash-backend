@@ -769,29 +769,9 @@ app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
   }
 });
 
-app.get('/api/finding-actions-basic', async (req, res) => {
-  try {
-    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
-    const issues = await getAllIssues(jql);
-
-    const mapped = issues.map(issue => ({
-      auditName: issue.fields.customfield_12126 || 'N/A',
-      status: issue.fields.status?.name || 'Unknown'
-    }));
-
-    res.json(mapped);
-  } catch (error) {
-    console.error('Error fetching Finding Actions:', error?.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to fetch finding actions.' });
-  }
-});
-
-
-
 
 // Server Start
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
 });
-
 
