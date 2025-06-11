@@ -571,7 +571,7 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
       }
 
       const status = issue.fields.status?.name?.toUpperCase();
-      if (status !== 'OVERDUE') return; // 👈 sadece OVERDUE
+      if (!['OVERDUE', 'OPEN'].includes(status)) return;  // ✅ OPEN da dahil
 
       const revisedDueDateStr = issue.fields.customfield_12129;
       const dueDateStr = issue.fields.duedate;
@@ -604,9 +604,6 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate action age summary' });
   }
 });
-
-
-
 
 
 
