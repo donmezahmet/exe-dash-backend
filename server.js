@@ -571,14 +571,22 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
       }
 
       const status = issue.fields.status?.name?.toUpperCase();
-      if (!['OVERDUE', 'OPEN'].includes(status)) return;  // ✅ OPEN da dahil
+      if (!['OVERDUE', 'OPEN', 'DELAYED'].includes(status)) return;
 
       const revisedDueDateStr = issue.fields.customfield_12129;
       const dueDateStr = issue.fields.duedate;
-      const rawDateStr = revisedDueDateStr || dueDateStr;
-      if (!rawDateStr) return;
 
-      const isoDateStr = parseUSDateToISO(rawDateStr);
+      let dateForCalculation = null;
+
+      if (status === 'DELAYED') {
+        if (!revisedDueDateStr) return; // revised boşsa dahil etme
+        dateForCalculation = revisedDueDateStr;
+      } else {
+        dateForCalculation = revisedDueDateStr || dueDateStr;
+        if (!dateForCalculation) return;
+      }
+
+      const isoDateStr = parseUSDateToISO(dateForCalculation);
       const dueDate = resetTime(new Date(isoDateStr));
       const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
 
@@ -604,6 +612,7 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate action age summary' });
   }
 });
+
 
 
 
