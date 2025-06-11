@@ -537,14 +537,12 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
 
-    // Yardımcı fonksiyon: Saat kısmını sıfırlar
     function resetTime(date) {
       return new Date(date.getFullYear(), date.getMonth(), date.getDate());
     }
 
-    // Yardımcı fonksiyon: MM/DD/YYYY formatını ISO'ya çevir
     function parseUSDateToISO(dateStr) {
-      if (!dateStr || !dateStr.includes('/')) return dateStr; // zaten ISO ise dokunma
+      if (!dateStr || !dateStr.includes('/')) return dateStr;
       const [month, day, year] = dateStr.split('/');
       return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
@@ -566,38 +564,23 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     };
 
     issues.forEach(issue => {
-      // 🎯 Lead filtresi uygula
+      const status = issue.fields.status?.name?.toUpperCase();
+      if (status !== 'DELAYED') return;
+
+      // 🔒 Lead filtresi varsa uygula
       if (leadFilter) {
         const leadField = issue.fields.customfield_19770;
         const leadValue = typeof leadField === 'string' ? leadField.trim() : '';
         if (leadValue !== leadFilter) return;
       }
 
-      const status = issue.fields.status?.name?.toUpperCase();
-
-      // ⛔ Sadece OPEN, OVERDUE ve DELAYED statülerini al
-      if (!['OPEN', 'OVERDUE', 'DELAYED'].includes(status)) return;
-
       const revisedDueDateStr = (issue.fields.customfield_12129 || '').trim();
-      const dueDateStr = (issue.fields.duedate || '').trim();
+      if (!revisedDueDateStr) return;
 
-      let rawDateStr;
-
-      if (status === 'DELAYED') {
-        if (!revisedDueDateStr) return; // revised yoksa geç
-        rawDateStr = revisedDueDateStr;
-      } else {
-        if (!revisedDueDateStr && !dueDateStr) return; // ikisi de boşsa geç
-        rawDateStr = revisedDueDateStr || dueDateStr;
-      }
-
-      // 🎯 Tarih formatı dönüşüm
-      const isoDateStr = parseUSDateToISO(rawDateStr);
+      const isoDateStr = parseUSDateToISO(revisedDueDateStr);
       const dueDate = resetTime(new Date(isoDateStr));
-
       const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
 
-      // 📊 Bucket belirleme
       let bucket = null;
       if (ageDays <= -360 && ageDays > -720) bucket = '-720–-360';
       else if (ageDays <= -180 && ageDays > -360) bucket = '-360–-180';
@@ -611,17 +594,16 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
       else if (ageDays <= 720) bucket = '360–720';
       else bucket = '720+';
 
-      if (bucket) {
-        result[bucket]++;
-      }
+      if (bucket) result[bucket]++;
     });
 
     res.json(result);
   } catch (error) {
-    console.error('Error generating action age summary:', error?.response?.data || error.message);
+    console.error('Error generating action age summary (DELAYED only):', error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to generate action age summary' });
   }
 });
+
 
 // Server Start
 app.listen(PORT, () => {
