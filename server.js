@@ -287,32 +287,66 @@ const control = typeof controlField === 'object' && controlField?.value ? contro
   }
 });
 // 8. Findings filtered by Control and Risk
-app.get('/api/finding-details-by-control-and-risk', async (req, res) => {
-  const { control, risk } = req.query;
-  if (!control || !risk) return res.status(400).json({ error: 'Missing control or risk parameter' });
-
+app.get('/api/statistics-by-control-and-risk', async (req, res) => {
   try {
+    const selectedStatus = req.query.status;
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
-    const result = issues.filter(issue => {
-      const controlField = issue.fields.customfield_19635;
-      const controlVal = typeof controlField === 'object' && controlField?.value ? controlField.value : 'Unassigned';
-      const riskVal = issue.fields.customfield_12557?.value || 'Unassigned';
-      return controlVal === control && riskVal === risk;
-    }).map(issue => ({
-      key: issue.key,
-      summary: issue.fields.summary
-    }));
+    const result = {};
+    const riskLevels = ['Critical', 'High', 'Medium', 'Low'];
+    const controlElements = new Set();
 
-    res.json(result);
+    issues.forEach(issue => {
+      const issueStatus = issue.fields.status?.name;
+      if (selectedStatus && issueStatus !== selectedStatus) return; // filtre varsa uygula
+
+      const controlField = issue.fields.customfield_19635;
+      const control = typeof controlField === 'object' && controlField?.value ? controlField.value : 'Unassigned';
+      const risk = issue.fields.customfield_12557?.value || 'Unassigned';
+
+      controlElements.add(control);
+
+      if (!result[control]) result[control] = {};
+      if (!result[control][risk]) result[control][risk] = 0;
+      result[control][risk]++;
+    });
+
+    const finalData = Array.from(controlElements).map(control => {
+      const row = { control };
+      let total = 0;
+
+      riskLevels.forEach(level => {
+        const count = result[control]?.[level] || 0;
+        row[level] = count;
+        total += count;
+      });
+
+      row.Total = total;
+      return row;
+    });
+
+    const totals = { control: 'Total Unique Issues:' };
+    let grandTotal = 0;
+    riskLevels.forEach(level => {
+      const sum = finalData.reduce((acc, row) => acc + (row[level] || 0), 0);
+      totals[level] = sum;
+      grandTotal += sum;
+    });
+    totals.Total = grandTotal;
+    finalData.push(totals);
+
+    res.json(finalData);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch filtered findings' });
+    console.error('Failed to fetch control-risk statistics:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch statistics by control and risk' });
   }
 });
 
+
 app.get('/api/statistics-by-type-and-risk', async (req, res) => {
   try {
+    const selectedStatus = req.query.status;
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
 
@@ -321,10 +355,11 @@ app.get('/api/statistics-by-type-and-risk', async (req, res) => {
     const riskTypes = new Set();
 
     issues.forEach(issue => {
+      const issueStatus = issue.fields.status?.name;
+      if (selectedStatus && issueStatus !== selectedStatus) return; // filtre varsa uygula
+
       const typeField = issue.fields.customfield_19636;
-const type = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
-
-
+      const type = typeof typeField === 'object' && typeField?.value ? typeField.value : 'Unassigned';
       const risk = issue.fields.customfield_12557?.value || 'Unassigned';
 
       riskTypes.add(type);
@@ -364,6 +399,7 @@ const type = typeof typeField === 'object' && typeField?.value ? typeField.value
     res.status(500).json({ error: 'Failed to fetch statistics by type and risk' });
   }
 });
+
 
 // 9. Findings filtered by Type and Risk
 app.get('/api/finding-details-by-type-and-risk', async (req, res) => {
