@@ -667,6 +667,29 @@ app.get('/api/finding-action-age-summary-delayed', async (req, res) => {
   }
 });
 
+app.get('/api/investigation-counts', async (req, res) => {
+  const ICT_PROJECT_KEY = 'ICT';
+
+  try {
+    const jql = `project = ${ICT_PROJECT_KEY} AND issuetype = "Investigation" ORDER BY created DESC`;
+    const issues = await getAllIssues(jql);
+
+    const investigations = issues.map(issue => ({
+      key: issue.key,
+      summary: issue.fields.summary,
+      year: typeof issue.fields.customfield_19899 === 'object'
+        ? issue.fields.customfield_19899?.value
+        : issue.fields.customfield_19899 || 'Unknown',
+      count: issue.fields.customfield_19900 || 0
+    }));
+
+    res.json(investigations);
+  } catch (error) {
+    console.error('Error fetching Investigation data:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch Investigation data.' });
+  }
+});
+
 
 // Server Start
 app.listen(PORT, () => {
