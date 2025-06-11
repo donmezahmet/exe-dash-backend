@@ -503,8 +503,9 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
     const statusMap = {
       'Planned': 1,
       'Fieldwork': 2,
-      'Reporting': 3,
-      'Completed': 4
+      'Pre Closing Meeting': 3,
+      'Closing Meeting': 4,
+      'Completed': 5
     };
 
     const result = issues.map(issue => {
@@ -517,7 +518,7 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
         auditYear: typeof issue.fields.customfield_16447 === 'object'
           ? issue.fields.customfield_16447?.value
           : issue.fields.customfield_16447 || 'Unknown',
-              auditLead: issue.fields.customfield_19803 || 'Unassigned', // ← EKLENECEK
+        auditLead: issue.fields.customfield_19803 || 'Unassigned',
         progressLevel: currentLevel,
         statusLabel: status
       };
@@ -529,6 +530,7 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch Yearly Audit Plan data' });
   }
 });
+
 
 app.get('/api/finding-action-age-summary', async (req, res) => {
   try {
