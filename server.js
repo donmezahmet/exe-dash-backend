@@ -597,6 +597,74 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
   }
 });
 
+app.get('/api/finding-action-age-summary-delayed', async (req, res) => {
+  try {
+    const leadFilter = req.query.lead;
+
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
+    const issues = await getAllIssues(jql);
+
+    function resetTime(date) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    const now = resetTime(new Date());
+
+    const result = {
+      '-720–-360': 0,
+      '-360–-180': 0,
+      '-180–-90': 0,
+      '-90–-30': 0,
+      '-30–0': 0,
+      '0–30': 0,
+      '30–90': 0,
+      '90–180': 0,
+      '180–360': 0,
+      '360–720': 0,
+      '720+': 0
+    };
+
+    issues.forEach(issue => {
+      // 🎯 Lead filtresi
+      if (leadFilter) {
+        const leadField = issue.fields.customfield_19770;
+        const leadValue = typeof leadField === 'string' ? leadField.trim() : '';
+        if (leadValue !== leadFilter) return;
+      }
+
+      // 🎯 Sadece DELAYED
+      const status = issue.fields.status?.name?.toUpperCase();
+      if (status !== 'DELAYED') return;
+
+      const revisedDueDateStr = issue.fields.customfield_12129;
+      if (!revisedDueDateStr) return;
+
+      const revisedDueDate = resetTime(new Date(revisedDueDateStr));
+      const ageDays = Math.floor((now - revisedDueDate) / (1000 * 60 * 60 * 24));
+
+      let bucket = null;
+      if (ageDays <= -360 && ageDays > -720) bucket = '-720–-360';
+      else if (ageDays <= -180 && ageDays > -360) bucket = '-360–-180';
+      else if (ageDays <= -90 && ageDays > -180) bucket = '-180–-90';
+      else if (ageDays <= -30 && ageDays > -90) bucket = '-90–-30';
+      else if (ageDays <= 0 && ageDays > -30) bucket = '-30–0';
+      else if (ageDays <= 30) bucket = '0–30';
+      else if (ageDays <= 90) bucket = '30–90';
+      else if (ageDays <= 180) bucket = '90–180';
+      else if (ageDays <= 360) bucket = '180–360';
+      else if (ageDays <= 720) bucket = '360–720';
+      else bucket = '720+';
+
+      if (bucket) result[bucket]++;
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error generating delayed action age summary:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to generate delayed action age summary' });
+  }
+});
+
 
 // Server Start
 app.listen(PORT, () => {
