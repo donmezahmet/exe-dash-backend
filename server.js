@@ -541,12 +541,6 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
       return new Date(date.getFullYear(), date.getMonth(), date.getDate());
     }
 
-    function parseUSDateToISO(dateStr) {
-      if (!dateStr || !dateStr.includes('/')) return dateStr;
-      const [month, day, year] = dateStr.split('/');
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-
     const now = resetTime(new Date());
 
     const result = {
@@ -564,21 +558,20 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
     };
 
     issues.forEach(issue => {
-      const status = issue.fields.status?.name?.toUpperCase();
-      if (status !== 'DELAYED') return;
-
-      // 🔒 Lead filtresi varsa uygula
+      // Lead filtresi uygula
       if (leadFilter) {
         const leadField = issue.fields.customfield_19770;
         const leadValue = typeof leadField === 'string' ? leadField.trim() : '';
         if (leadValue !== leadFilter) return;
       }
 
-      const revisedDueDateStr = (issue.fields.customfield_12129 || '').trim();
-      if (!revisedDueDateStr) return;
+      const status = issue.fields.status?.name?.toUpperCase();
+      if (!['OPEN', 'OVERDUE'].includes(status)) return;
 
-      const isoDateStr = parseUSDateToISO(revisedDueDateStr);
-      const dueDate = resetTime(new Date(isoDateStr));
+      const dueDateStr = issue.fields.duedate;
+      if (!dueDateStr) return;
+
+      const dueDate = resetTime(new Date(dueDateStr));
       const ageDays = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
 
       let bucket = null;
@@ -599,7 +592,7 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Error generating action age summary (DELAYED only):', error?.response?.data || error.message);
+    console.error('Error generating action age summary:', error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to generate action age summary' });
   }
 });
