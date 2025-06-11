@@ -769,6 +769,34 @@ app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
   }
 });
 
+app.get('/api/finding-actions-basic', async (req, res) => {
+  try {
+    const jql = `project = YOUR_PROJECT_KEY AND issuetype = "Finding Action"`;
+    const fields = ['customfield_12126', 'status']; // Audit Name ve Status
+    const maxResults = 1000;
+
+    const response = await fetch(`${jiraBaseUrl}/rest/api/3/search?jql=${encodeURIComponent(jql)}&fields=${fields.join(',')}&maxResults=${maxResults}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${jiraEmail}:${jiraApiToken}`).toString('base64')}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+    const mapped = result.issues.map(issue => ({
+      auditName: issue.fields.customfield_12126 || 'N/A',
+      status: issue.fields.status?.name || 'Unknown'
+    }));
+
+    res.json(mapped);
+  } catch (error) {
+    console.error('Error fetching Finding Actions:', error);
+    res.status(500).json({ error: 'Failed to fetch finding actions.' });
+  }
+});
+
+
 
 // Server Start
 app.listen(PORT, () => {
