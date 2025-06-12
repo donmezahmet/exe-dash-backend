@@ -799,6 +799,40 @@ app.get('/api/finding-actions-by-audit-name-and-status', async (req, res) => {
   }
 });
 
+app.get('/api/unique-audit-projects-by-year', async (req, res) => {
+  try {
+    const jql = `project = IAP AND issuetype = "Audit Finding" AND statusCategory != Done`;
+    const fields = ['customfield_16447', 'customfield_12126']; // Audit Year, Audit Name
+
+    const results = await fetchAllIssues(jql, fields);
+
+    const yearToAuditNames = {};
+
+    results.forEach(issue => {
+      const year = issue.fields.customfield_16447 || 'Unknown';
+      const name = issue.fields.customfield_12126;
+
+      if (!name) return;
+
+      if (!yearToAuditNames[year]) {
+        yearToAuditNames[year] = new Set();
+      }
+
+      yearToAuditNames[year].add(name);
+    });
+
+    const finalResult = Object.entries(yearToAuditNames).map(([year, namesSet]) => ({
+      year,
+      count: namesSet.size
+    })).sort((a, b) => b.year.localeCompare(a.year)); // yıl bazında azalan sırala
+
+    res.json(finalResult);
+  } catch (err) {
+    console.error('Error fetching audit project count:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 
 // Server Start
