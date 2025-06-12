@@ -802,9 +802,7 @@ app.get('/api/finding-actions-by-audit-name-and-status', async (req, res) => {
 app.get('/api/unique-audit-projects-by-year', async (req, res) => {
   try {
     const jql = `project = IAP AND issuetype = "Audit Finding" AND statusCategory != Done`;
-    const fields = ['customfield_16447', 'customfield_12126']; // Audit Year, Audit Name
-
-    const results = await fetchAllIssues(jql, fields);
+    const results = await getAllIssues(jql); // ✅ burada düzeltildi
 
     const yearToAuditNames = {};
 
@@ -823,8 +821,8 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
 
     const finalResult = Object.entries(yearToAuditNames).map(([year, namesSet]) => ({
       year,
-      names: Array.from(namesSet)  // ✅ Artık count yerine doğrudan isimleri döndürüyoruz
-    })).sort((a, b) => b.year.localeCompare(a.year)); // yıl bazında azalan sırala
+      names: Array.from(namesSet)
+    })).sort((a, b) => b.year.localeCompare(a.year));
 
     res.json(finalResult);
   } catch (err) {
@@ -832,6 +830,7 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 
