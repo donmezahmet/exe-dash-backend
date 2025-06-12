@@ -801,14 +801,14 @@ app.get('/api/finding-actions-by-audit-name-and-status', async (req, res) => {
 
 app.get('/api/unique-audit-projects-by-year', async (req, res) => {
   try {
-    const jql = `project = IAP AND issuetype = "Audit Finding" AND statusCategory != Done`;
-    const results = await getAllIssues(jql); // ✅ burada düzeltildi
+    const jql = `project = IAP AND issuetype = "Audit Finding"`; // ✅ DONE filtresi kalktı
+    const results = await getAllIssues(jql);
 
     const yearToAuditNames = {};
 
     results.forEach(issue => {
       const year = issue.fields.customfield_16447 || 'Unknown';
-      const name = issue.fields.customfield_12126;
+      const name = issue.fields.customfield_12126 || issue.fields.summary;
 
       if (!name) return;
 
@@ -830,6 +830,7 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 
