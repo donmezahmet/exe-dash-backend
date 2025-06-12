@@ -769,6 +769,37 @@ app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
   }
 });
 
+// Yeni API: Finding Actions - Grouped by Audit Name and Status
+app.get('/api/finding-actions-by-audit-name-and-status', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
+    const issues = await getAllIssues(jql);
+
+    const result = {};
+
+    issues.forEach(issue => {
+      const auditName = issue.fields.customfield_12126 || 'Unassigned';
+      const status = issue.fields.status?.name || 'Unknown';
+
+      if (!result[auditName]) {
+        result[auditName] = {};
+      }
+
+      if (!result[auditName][status]) {
+        result[auditName][status] = 0;
+      }
+
+      result[auditName][status]++;
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching actions by audit name and status:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch data grouped by audit name and status' });
+  }
+});
+
+
 
 // Server Start
 app.listen(PORT, () => {
