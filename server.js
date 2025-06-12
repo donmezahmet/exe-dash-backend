@@ -823,7 +823,7 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
 
     const finalResult = Object.entries(yearToAuditNames).map(([year, namesSet]) => ({
       year,
-      count: namesSet.size
+      names: Array.from(namesSet)  // ✅ Artık count yerine doğrudan isimleri döndürüyoruz
     })).sort((a, b) => b.year.localeCompare(a.year)); // yıl bazında azalan sırala
 
     res.json(finalResult);
@@ -832,6 +832,7 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 
