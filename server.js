@@ -734,33 +734,29 @@ app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
 
     const riskLevels = ['Critical', 'High', 'Medium', 'Low'];
     const result = {};
-    const auditProjects = new Set();
 
     issues.forEach(issue => {
       const projectName = issue.fields.customfield_12126 || 'Unassigned';
+      const auditYearRaw = issue.fields.customfield_16447;
+      const auditYear = typeof auditYearRaw === 'object' ? auditYearRaw?.value : (auditYearRaw || 'Unknown');
       const risk = issue.fields.customfield_12557?.value || 'Unassigned';
 
-      auditProjects.add(projectName);
+      const key = `${projectName}___${auditYear}`;  // unique key
 
-      if (!result[projectName]) {
-        result[projectName] = {};
+      if (!result[key]) {
+        result[key] = {
+          project: projectName,
+          year: auditYear,
+          Critical: 0, High: 0, Medium: 0, Low: 0
+        };
       }
 
-      if (!result[projectName][risk]) {
-        result[projectName][risk] = 0;
+      if (riskLevels.includes(risk)) {
+        result[key][risk]++;
       }
-
-      result[projectName][risk]++;
     });
 
-    // Bar chart formatına dönüştür
-    const formatted = Array.from(auditProjects).map(project => {
-      const row = { project };
-      riskLevels.forEach(level => {
-        row[level] = result[project]?.[level] || 0;
-      });
-      return row;
-    });
+    const formatted = Object.values(result);
 
     res.json(formatted);
   } catch (error) {
@@ -768,6 +764,7 @@ app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch risk distribution by project' });
   }
 });
+
 
 // Yeni API: Finding Actions - Grouped by Audit Name and Status
 app.get('/api/finding-actions-by-audit-name-and-status', async (req, res) => {
