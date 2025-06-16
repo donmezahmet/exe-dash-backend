@@ -776,7 +776,7 @@ app.get('/api/finding-actions-by-audit-name-and-status', async (req, res) => {
 
     issues.forEach(issue => {
       const auditName = issue.fields.customfield_12126 || 'Unassigned';
-      const auditYear = issue.fields.customfield_16447 || 'Unknown';
+const auditYear = issue.fields.customfield_16447?.value || 'Unknown';
       const status = issue.fields.status?.name || 'Unknown';
 
       // Aynı Audit Name ve Audit Year kombinasyonuna sahip bir kayıt var mı?
