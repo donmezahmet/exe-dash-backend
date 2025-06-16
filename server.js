@@ -772,21 +772,21 @@ app.get('/api/finding-actions-by-audit-name-and-status', async (req, res) => {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
 
-    const result = {};
+    const result = [];
 
     issues.forEach(issue => {
       const auditName = issue.fields.customfield_12126 || 'Unassigned';
+      const auditYear = issue.fields.customfield_16447 || 'Unknown';
       const status = issue.fields.status?.name || 'Unknown';
 
-      if (!result[auditName]) {
-        result[auditName] = {};
+      // Aynı Audit Name ve Audit Year kombinasyonuna sahip bir kayıt var mı?
+      let record = result.find(r => r.auditName === auditName && r.auditYear === auditYear);
+      if (!record) {
+        record = { auditName, auditYear };
+        result.push(record);
       }
 
-      if (!result[auditName][status]) {
-        result[auditName][status] = 0;
-      }
-
-      result[auditName][status]++;
+      record[status] = (record[status] || 0) + 1;
     });
 
     res.json(result);
@@ -795,6 +795,7 @@ app.get('/api/finding-actions-by-audit-name-and-status', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch data grouped by audit name and status' });
   }
 });
+
 
 app.get('/api/unique-audit-projects-by-year', async (req, res) => {
   try {
@@ -837,4 +838,3 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
 });
-
