@@ -799,10 +799,10 @@ const auditYear = issue.fields.customfield_16447?.value || 'Unknown';
 
 app.get('/api/unique-audit-projects-by-year', async (req, res) => {
   try {
-    const jql = `project = IAP AND issuetype = "Audit Finding"`; // ✅ DONE filtresi kalktı
+    const jql = `project = IAP AND issuetype = "Audit Finding"`;
     const results = await getAllIssues(jql);
 
-    const yearToAuditNames = {};
+    const yearToProjectKeys = {};
 
     results.forEach(issue => {
       const year = issue.fields.customfield_16447 || 'Unknown';
@@ -810,16 +810,18 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
 
       if (!name) return;
 
-      if (!yearToAuditNames[year]) {
-        yearToAuditNames[year] = new Set();
+      const uniqueKey = `${name}___${year}`; // name + year birlikte uniq
+
+      if (!yearToProjectKeys[year]) {
+        yearToProjectKeys[year] = new Set();
       }
 
-      yearToAuditNames[year].add(name);
+      yearToProjectKeys[year].add(uniqueKey);
     });
 
-    const finalResult = Object.entries(yearToAuditNames).map(([year, namesSet]) => ({
+    const finalResult = Object.entries(yearToProjectKeys).map(([year, keySet]) => ({
       year,
-      names: Array.from(namesSet)
+      count: keySet.size
     })).sort((a, b) => b.year.localeCompare(a.year));
 
     res.json(finalResult);
