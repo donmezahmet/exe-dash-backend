@@ -548,8 +548,8 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
       const status = issue.fields.status?.name || 'Unknown';
       const currentLevel = statusMap[status] || 0;
 
-      const auditLeadField = issue.fields.customfield_20105;
-     const auditLead = auditLeadField?.displayName || auditLeadField?.name || auditLeadField?.emailAddress || 'Unassigned';
+     const auditLead = issue.fields.customfield_20106 || 'Unassigned'; // short text field
+
 
 
       return {
