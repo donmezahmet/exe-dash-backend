@@ -808,35 +808,35 @@ const auditYear = issue.fields.customfield_16447?.value || 'Unknown';
 
 
 app.get('/api/unique-audit-projects-by-year', async (req, res) => {
+  const PROJECT_KEY = 'IAP2'; // Yeni proje anahtarı
+
   try {
-    const jql = `project = IAP AND issuetype = "Audit Finding"`;
-    const results = await getAllIssues(jql);
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Task"`;
+    const issues = await getAllIssues(jql);
 
-    const yearToProjectKeys = {};
+    const yearCountMap = {};
 
-    results.forEach(issue => {
-      const year = issue.fields.customfield_16447 || 'Unknown';
-      const name = issue.fields.customfield_12126 || issue.fields.summary;
+    issues.forEach(issue => {
+      const yearRaw = issue.fields.customfield_16447;
+      const year = typeof yearRaw === 'object' && yearRaw?.value
+        ? yearRaw.value
+        : yearRaw || 'Unknown';
 
-      if (!name) return;
-
-      const uniqueKey = `${name}___${year}`; // name + year birlikte uniq
-
-      if (!yearToProjectKeys[year]) {
-        yearToProjectKeys[year] = new Set();
+      if (!yearCountMap[year]) {
+        yearCountMap[year] = 0;
       }
 
-      yearToProjectKeys[year].add(uniqueKey);
+      yearCountMap[year]++;
     });
 
-    const finalResult = Object.entries(yearToProjectKeys).map(([year, keySet]) => ({
+    const result = Object.entries(yearCountMap).map(([year, count]) => ({
       year,
-      count: keySet.size
-    })).sort((a, b) => b.year.localeCompare(a.year));
+      count
+    })).sort((a, b) => b.year.localeCompare(a.year)); // Yıl azalan sırada
 
-    res.json(finalResult);
+    res.json(result);
   } catch (err) {
-    console.error('Error fetching audit project count:', err);
+    console.error('Error fetching audit project count:', err?.response?.data || err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
