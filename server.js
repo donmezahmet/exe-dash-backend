@@ -528,12 +528,12 @@ app.get('/api/finding-action-status-by-lead', async (req, res) => {
   }
 });
 
-// ✅ Yeni API alias: /api/yearly-audit-plan
+/// ✅ Yeni API alias: /api/yearly-audit-plan (updated for IAP2)
 app.get('/api/yearly-audit-plan', async (req, res) => {
-  const IAP_PROJECT_KEY = 'IAP';
+  const NEW_PROJECT_KEY = 'IAP2';  // Yeni proje anahtarı
 
   try {
-    const jql = `project = ${IAP_PROJECT_KEY} AND issuetype = "Audit Project" ORDER BY created DESC`;
+    const jql = `project = ${NEW_PROJECT_KEY} AND issuetype = "Audit Project" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
     const statusMap = {
@@ -548,13 +548,16 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
       const status = issue.fields.status?.name || 'Unknown';
       const currentLevel = statusMap[status] || 0;
 
+      const auditLeadField = issue.fields.customfield_20105;
+      const auditLead = auditLeadField?.displayName || 'Unassigned';
+
       return {
         key: issue.key,
         summary: issue.fields.summary,
         auditYear: typeof issue.fields.customfield_16447 === 'object'
           ? issue.fields.customfield_16447?.value
           : issue.fields.customfield_16447 || 'Unknown',
-        auditLead: issue.fields.customfield_19803 || 'Unassigned',
+        auditLead,
         progressLevel: currentLevel,
         statusLabel: status
       };
@@ -566,6 +569,7 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch Yearly Audit Plan data' });
   }
 });
+
 
 
 app.get('/api/finding-action-age-summary', async (req, res) => {
