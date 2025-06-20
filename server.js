@@ -564,6 +564,8 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
       };
     });
 
+console.log("Filtered Audit Plan Results:", result); //  LOG BURAYA
+
     res.json(result);
   } catch (error) {
     console.error('Error fetching Yearly Audit Plan data:', error?.response?.data || error.message);
