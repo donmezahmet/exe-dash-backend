@@ -536,6 +536,8 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
     const jql = `project = ${NEW_PROJECT_KEY} AND issuetype = "Audit Project" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
+    console.log("🚀 Toplam issue sayısı:", issues.length);
+
     const statusMap = {
       'Planned': 1,
       'Fieldwork': 2,
@@ -548,9 +550,9 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
       const status = issue.fields.status?.name || 'Unknown';
       const currentLevel = statusMap[status] || 0;
 
-     const auditLead = issue.fields.customfield_20106 || 'Unassigned'; // short text field
+      console.log("🔍 Statü:", status);
 
-
+      const auditLead = issue.fields.customfield_20106 || 'Unassigned'; // short text field
 
       return {
         key: issue.key,
@@ -564,14 +566,15 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
       };
     });
 
-console.log("Filtered Audit Plan Results:", result); //  LOG BURAYA
+    console.log("📊 Filtered Audit Plan Results:", result);
 
     res.json(result);
   } catch (error) {
-    console.error('Error fetching Yearly Audit Plan data:', error?.response?.data || error.message);
+    console.error('❌ Error fetching Yearly Audit Plan data:', error?.response?.data || error.message);
     res.status(500).json({ error: 'Failed to fetch Yearly Audit Plan data' });
   }
 });
+
 
 
 
