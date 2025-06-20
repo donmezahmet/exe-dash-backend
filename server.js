@@ -533,7 +533,7 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
   const NEW_PROJECT_KEY = 'IAP2';  // Yeni proje anahtarı
 
   try {
-    const jql = `project = ${NEW_PROJECT_KEY} AND issuetype = "Audit Project" ORDER BY created DESC`;
+    const jql = `project = ${NEW_PROJECT_KEY} AND issuetype = "Task" ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
 
     console.log("🚀 Toplam issue sayısı:", issues.length);
