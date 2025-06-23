@@ -808,35 +808,32 @@ const auditYear = issue.fields.customfield_16447?.value || 'Unknown';
 
 
 app.get('/api/unique-audit-projects-by-year', async (req, res) => {
-  const PROJECT_KEY = 'IAP2'; // Yeni proje anahtarı
+  const PROJECT_KEY = 'IAP2';
 
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Task"`;
     const issues = await getAllIssues(jql);
 
+    const validStatuses = ['Pre Closing Meeting', 'Closing Meeting', 'Completed'];
     const yearCountMap = {};
 
     issues.forEach(issue => {
-      const yearRaw = issue.fields.customfield_16447;
       const status = issue.fields.status?.name;
+      if (!validStatuses.includes(status)) return;
 
+      const yearRaw = issue.fields.customfield_16447;
       const year = typeof yearRaw === 'object' && yearRaw?.value
         ? yearRaw.value
         : yearRaw || 'Unknown';
 
-      // 🔐 Sadece Closing Meeting ve Completed olanlar dahil
-      if (status === 'Closing Meeting' || status === 'Completed') {
-        if (!yearCountMap[year]) {
-          yearCountMap[year] = 0;
-        }
-        yearCountMap[year]++;
-      }
+      if (!yearCountMap[year]) yearCountMap[year] = 0;
+      yearCountMap[year]++;
     });
 
     const result = Object.entries(yearCountMap).map(([year, count]) => ({
       year,
       count
-    })).sort((a, b) => b.year.localeCompare(a.year)); // Yıl azalan sırada
+    })).sort((a, b) => b.year.localeCompare(a.year));
 
     res.json(result);
   } catch (err) {
@@ -844,9 +841,6 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-
-
 
 
 
