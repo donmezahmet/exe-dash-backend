@@ -818,15 +818,19 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
 
     issues.forEach(issue => {
       const yearRaw = issue.fields.customfield_16447;
+      const status = issue.fields.status?.name;
+
       const year = typeof yearRaw === 'object' && yearRaw?.value
         ? yearRaw.value
         : yearRaw || 'Unknown';
 
-      if (!yearCountMap[year]) {
-        yearCountMap[year] = 0;
+      // 🔐 Sadece Closing Meeting ve Completed olanlar dahil
+      if (status === 'Closing Meeting' || status === 'Completed') {
+        if (!yearCountMap[year]) {
+          yearCountMap[year] = 0;
+        }
+        yearCountMap[year]++;
       }
-
-      yearCountMap[year]++;
     });
 
     const result = Object.entries(yearCountMap).map(([year, count]) => ({
