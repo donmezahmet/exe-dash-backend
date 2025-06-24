@@ -1,3 +1,31 @@
+const { isUserInGroup } = require('./googleAuth');
+const { isUserInGroup } = require('./googleAuth');
+
+app.post('/api/auth/google', async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const userEmail = payload.email;
+
+    const isMember = await isUserInGroup(userEmail);
+    if (!isMember) {
+      return res.status(403).json({ message: 'Unauthorized - not in allowed group' });
+    }
+
+    // user authorized –> continue
+    return res.json({ email: userEmail });
+  } catch (error) {
+    console.error('Login failed:', error);
+    return res.status(401).json({ message: 'Invalid token' });
+  }
+});
+
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
