@@ -1,87 +1,9 @@
+require('dotenv').config();
 const express = require('express');
+const axios = require('axios');
 const cors = require('cors');
-const session = require('express-session');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const dotenv = require('dotenv');
-const { isUserInGroup } = require('./googleAuth');
-
-dotenv.config();
-
 const app = express();
-app.use(cors({
-  origin: 'https://donmezahmet.github.io',
-  credentials: true
-}));
-app.use(express.json());
-app.use(session({
-  secret: 'supersecretkey',
-  resave: false,
-  saveUninitialized: true
-}));
-app.use(passport.initialize());
-app.use(passport.session());
-
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
-
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'https://exe-dash-backend.onrender.com/auth/google/callback'
-},
-async (accessToken, refreshToken, profile, done) => {
-  const email = profile.emails[0].value;
-  const isMember = await isUserInGroup(email);
-  if (isMember) {
-    return done(null, profile);
-  } else {
-    return done(null, false, { message: 'Not authorized (not in allowed Google Group)' });
-  }
-}));
-
-// Login endpoint
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
-
-// Google callback endpoint
-app.get('/auth/google/callback',
-  passport.authenticate('google', {
-    failureRedirect: '/auth/failure',
-    session: true
-  }),
-  (req, res) => {
-    res.redirect('https://donmezahmet.github.io/exe-dash-frontend?success=true');
-  }
-);
-
-// Failure endpoint
-app.get('/auth/failure', (req, res) => {
-  res.status(401).send('Authentication Failed');
-});
-
-// Get current user
-app.get('/auth/user', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.json(req.user);
-  } else {
-    res.status(401).json({ error: 'Not authenticated' });
-  }
-});
-
-// Logout endpoint
-app.get('/auth/logout', (req, res) => {
-  req.logout(err => {
-    if (err) return res.status(500).send('Error logging out');
-    res.redirect('https://donmezahmet.github.io/exe-dash-frontend');
-  });
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
+const PORT = 3000;
 
 app.use(cors({
   origin: '*',
@@ -135,8 +57,6 @@ async function getAllIssues(jql) {
 
   return allIssues;
 }
-
-
 
 // === API Routes ===
 
@@ -888,32 +808,35 @@ const auditYear = issue.fields.customfield_16447?.value || 'Unknown';
 
 
 app.get('/api/unique-audit-projects-by-year', async (req, res) => {
-  const PROJECT_KEY = 'IAP2';
+  const PROJECT_KEY = 'IAP2'; // Yeni proje anahtarı
 
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Task"`;
     const issues = await getAllIssues(jql);
 
-    const validStatuses = ['Pre Closing Meeting', 'Closing Meeting', 'Completed'];
     const yearCountMap = {};
 
     issues.forEach(issue => {
-      const status = issue.fields.status?.name;
-      if (!validStatuses.includes(status)) return;
-
       const yearRaw = issue.fields.customfield_16447;
+      const status = issue.fields.status?.name;
+
       const year = typeof yearRaw === 'object' && yearRaw?.value
         ? yearRaw.value
         : yearRaw || 'Unknown';
 
-      if (!yearCountMap[year]) yearCountMap[year] = 0;
-      yearCountMap[year]++;
+      // 🔐 Sadece Closing Meeting ve Completed olanlar dahil
+      if (status === 'Closing Meeting' || status === 'Completed') {
+        if (!yearCountMap[year]) {
+          yearCountMap[year] = 0;
+        }
+        yearCountMap[year]++;
+      }
     });
 
     const result = Object.entries(yearCountMap).map(([year, count]) => ({
       year,
       count
-    })).sort((a, b) => b.year.localeCompare(a.year));
+    })).sort((a, b) => b.year.localeCompare(a.year)); // Yıl azalan sırada
 
     res.json(result);
   } catch (err) {
@@ -921,6 +844,9 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
+
 
 
 
