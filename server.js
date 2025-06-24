@@ -1,4 +1,3 @@
-const express = require('express');
 const { isUserInGroup } = require('./googleAuth');
 const app = express();
 
