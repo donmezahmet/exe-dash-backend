@@ -1,55 +1,6 @@
-const { isUserInGroup } = require('./googleAuth');
-
-app.use(express.json());
-
-app.get('/secure-data', async (req, res) => {
-  const userEmail = req.query.email; // veya req.body.email
-
-  if (!userEmail) {
-    return res.status(400).json({ message: 'Missing user email' });
-  }
-
-  try {
-    const isMember = await isUserInGroup(userEmail);
-    if (!isMember) {
-      return res.status(403).json({ message: 'Unauthorized - not in allowed group' });
-    }
-
-    // yetkili kullanıcı
-    res.json({ message: 'Access granted to secure data.' });
-  } catch (err) {
-    console.error('Error during group check:', err.message);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-app.post('/api/auth/google', async (req, res) => {
-  const { token } = req.body;
-
-  try {
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
-
-    const payload = ticket.getPayload();
-    const userEmail = payload.email;
-
-    const isMember = await isUserInGroup(userEmail);
-    if (!isMember) {
-      return res.status(403).json({ message: 'Unauthorized - not in allowed group' });
-    }
-
-    // user authorized –> continue
-    return res.json({ email: userEmail });
-  } catch (error) {
-    console.error('Login failed:', error);
-    return res.status(401).json({ message: 'Invalid token' });
-  }
-});
-
 require('dotenv').config();
 const express = require('express');
+const { isUserInGroup } = require('./googleAuth');
 const axios = require('axios');
 const cors = require('cors');
 const app = express();
@@ -107,6 +58,27 @@ async function getAllIssues(jql) {
 
   return allIssues;
 }
+
+app.post('/verify-group-membership', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+    const isMember = await isUserInGroup(email);
+    if (isMember) {
+      res.json({ authorized: true });
+    } else {
+      res.status(403).json({ authorized: false, error: 'User is not in the allowed group' });
+    }
+  } catch (error) {
+    console.error('Error during group verification:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 // === API Routes ===
 
