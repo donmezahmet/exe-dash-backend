@@ -1,31 +1,16 @@
-const path = require('path');
-const { google } = require('googleapis');
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const app = express();
 const PORT = 3000;
-const KEYFILEPATH = path.join(__dirname, 'audit123.json'); // JSON dosyanın yolu
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
-
-const auth = new google.auth.GoogleAuth({
-  keyFile: KEYFILEPATH,
-  scopes: SCOPES,
-});
-
-const sheets = google.sheets({ version: 'v4', auth });
-
-const SPREADSHEET_ID = '1jYC8Ge0SpNUc32ODwCzX58WyATvJUzrAT7kWJQMTIFU';
-const SHEET_NAME = 'Sheet1';
-
 
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+
 
 const JIRA_DOMAIN = process.env.JIRA_DOMAIN;
 const JIRA_EMAIL = process.env.JIRA_EMAIL;
@@ -190,41 +175,6 @@ const result = issues
     res.status(500).json({ error: 'Failed to fetch finding details' });
   }
 });
-app.post('/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password required' });
-    }
-
-    // Google Sheets'ten veri çek
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:B`,
-    });
-
-    const rows = response.data.values;
-    if (!rows || rows.length === 0) {
-      console.error('No data found in sheet');
-      return res.status(500).json({ message: 'No data found in sheet' });
-    }
-
-    const data = rows.slice(1); // Başlık satırını atla
-
-    const user = data.find(row => row[0] === username && row[1] === password);
-
-    if (user) {
-      return res.json({ message: 'Login successful' });
-    } else {
-      return res.status(401).json({ message: 'Invalid username or password' });
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-
 
 // 5. Status Distribution (Pie Chart)
 app.get('/api/finding-status-distribution', async (req, res) => {
