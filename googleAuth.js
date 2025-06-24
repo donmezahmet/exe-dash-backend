@@ -1,10 +1,12 @@
-// googleAuth.js
 const { google } = require('googleapis');
 
+// Ortam değişkeninden gelen JSON string'i düzgün parse ediliyor
+const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY.replace(/\\n/g, '\n'));
+
 const auth = new google.auth.JWT(
-  process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+  serviceAccount.client_email,
   null,
-  JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY.replace(/\\n/g, '\n')),
+  serviceAccount.private_key,
   ['https://www.googleapis.com/auth/admin.directory.group.readonly'],
   process.env.GOOGLE_IMPERSONATE_ADMIN_EMAIL
 );
