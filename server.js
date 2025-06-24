@@ -6,7 +6,7 @@ const axios = require('axios');
 const cors = require('cors');
 const app = express();
 const PORT = 3000;
-const KEYFILEPATH = path.join(__dirname, 'audit-dashboard-463909-3c7856d.json'); // JSON dosyanın yolu
+const KEYFILEPATH = path.join(__dirname, 'audit123.json'); // JSON dosyanın yolu
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
 const auth = new google.auth.GoogleAuth({
@@ -197,6 +197,7 @@ app.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Username and password required' });
     }
 
+    // Google Sheets'ten veri çek
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: `${SHEET_NAME}!A:B`,
@@ -204,6 +205,7 @@ app.post('/login', async (req, res) => {
 
     const rows = response.data.values;
     if (!rows || rows.length === 0) {
+      console.error('No data found in sheet');
       return res.status(500).json({ message: 'No data found in sheet' });
     }
 
@@ -221,6 +223,7 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 
 // 5. Status Distribution (Pie Chart)
