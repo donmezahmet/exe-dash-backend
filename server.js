@@ -1,5 +1,4 @@
 const { isUserInGroup } = require('./googleAuth');
-const app = express();
 
 app.use(express.json());
 
