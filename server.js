@@ -1,5 +1,29 @@
+const express = require('express');
 const { isUserInGroup } = require('./googleAuth');
-const { isUserInGroup } = require('./googleAuth');
+const app = express();
+
+app.use(express.json());
+
+app.get('/secure-data', async (req, res) => {
+  const userEmail = req.query.email; // veya req.body.email
+
+  if (!userEmail) {
+    return res.status(400).json({ message: 'Missing user email' });
+  }
+
+  try {
+    const isMember = await isUserInGroup(userEmail);
+    if (!isMember) {
+      return res.status(403).json({ message: 'Unauthorized - not in allowed group' });
+    }
+
+    // yetkili kullanıcı
+    res.json({ message: 'Access granted to secure data.' });
+  } catch (err) {
+    console.error('Error during group check:', err.message);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 app.post('/api/auth/google', async (req, res) => {
   const { token } = req.body;
