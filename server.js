@@ -1,10 +1,87 @@
-require('dotenv').config();
 const express = require('express');
-const { isUserInGroup } = require('./googleAuth');
-const axios = require('axios');
 const cors = require('cors');
+const session = require('express-session');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const dotenv = require('dotenv');
+const { isUserInGroup } = require('./googleAuth');
+
+dotenv.config();
+
 const app = express();
-const PORT = 3000;
+app.use(cors({
+  origin: 'https://donmezahmet.github.io',
+  credentials: true
+}));
+app.use(express.json());
+app.use(session({
+  secret: 'supersecretkey',
+  resave: false,
+  saveUninitialized: true
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
+
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: 'https://exe-dash-backend.onrender.com/auth/google/callback'
+},
+async (accessToken, refreshToken, profile, done) => {
+  const email = profile.emails[0].value;
+  const isMember = await isUserInGroup(email);
+  if (isMember) {
+    return done(null, profile);
+  } else {
+    return done(null, false, { message: 'Not authorized (not in allowed Google Group)' });
+  }
+}));
+
+// Login endpoint
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+// Google callback endpoint
+app.get('/auth/google/callback',
+  passport.authenticate('google', {
+    failureRedirect: '/auth/failure',
+    session: true
+  }),
+  (req, res) => {
+    res.redirect('https://donmezahmet.github.io/exe-dash-frontend?success=true');
+  }
+);
+
+// Failure endpoint
+app.get('/auth/failure', (req, res) => {
+  res.status(401).send('Authentication Failed');
+});
+
+// Get current user
+app.get('/auth/user', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json(req.user);
+  } else {
+    res.status(401).json({ error: 'Not authenticated' });
+  }
+});
+
+// Logout endpoint
+app.get('/auth/logout', (req, res) => {
+  req.logout(err => {
+    if (err) return res.status(500).send('Error logging out');
+    res.redirect('https://donmezahmet.github.io/exe-dash-frontend');
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
 
 app.use(cors({
   origin: '*',
@@ -59,25 +136,6 @@ async function getAllIssues(jql) {
   return allIssues;
 }
 
-app.post('/verify-group-membership', async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
-  }
-
-  try {
-    const isMember = await isUserInGroup(email);
-    if (isMember) {
-      res.json({ authorized: true });
-    } else {
-      res.status(403).json({ authorized: false, error: 'User is not in the allowed group' });
-    }
-  } catch (error) {
-    console.error('Error during group verification:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 
 // === API Routes ===
