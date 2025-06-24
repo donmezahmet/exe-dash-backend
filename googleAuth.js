@@ -1,7 +1,6 @@
 const { google } = require('googleapis');
 
-// Ortam değişkeninden gelen JSON string'i düzgün parse ediliyor
-const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY.replace(/\\n/g, '\n'));
+const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
 
 const auth = new google.auth.JWT(
   serviceAccount.client_email,
