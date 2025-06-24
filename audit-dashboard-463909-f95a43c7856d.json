@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "audit-dashboard-463909",
+  "private_key_id": "f95a43c7856df60252734f7c09f0dc2a9082bc66",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCsrYRWqCAm28Ap\nu12DEMTsiBfto87pcvomyCRfhS/CZTvWvEMJUMobPjplO6bHxTtIlvM3Q2EPXnm5\nnIEunap61NhhnFxyBONfAKfepVMxzkbwVCdb76p207dr7O/8Wiw8ZZMw7L63l0mr\niGw6R0GWZhtaXvLgzBe+n+Nwt5BG87GqAVajTi97ClY36V9g8X6SUswqxyUdFzWA\nC+DldJbKV2HXSuE6RsxKD664eV0g4dtRwcLw0AH9WeodAHn3JerarsxYJTQm0mP2\nTGlVte2WUb3NQ227kgI+2/ZHj1ID2YC2BBSYk+MzrVLCeMXcQbJy1kS8WzXm5LHb\n0x4CRFrJAgMBAAECggEAGBOxqiuTIBfv+WGorke+TYTEYVw/04k2nAW4HKGDgUWA\nTHa/miLrq1TH66mfnadAluSFUSVR+UShEGJkGM3fIXVgHmwg770CvxJmVcMTkJRE\ni+oP+t+2Ew9+Ocw1wigIlvtKxL2d8hdkLEi/XnjlCkV+duFaWEHc5bWBjwvpUBsb\n+9RCsXCpavtkfZp1jLgk9xAbYf2LZW6RjB/m+2kn2HorVF0FG2zzTuSknIdtvOWD\npbt7IjHLzRNaEBYUmGYvyUnRX8irABmGDx5CHXAM1l15H30L/PMgI1xVFFvAjzpz\n9YzGScL/Z1kSsqZAdhM+mZD8VQWz+mUbr2PiMlSlIQKBgQDWaR/GPiuQ7ABkt+Co\nlMT5lJaHtfdNN1U2j8s+d4xjmCS1JF9tjPqPmgfUYZJ4MjNvztdDOa9+rCs9QjvR\n7lgFAXqIFGQz1QKR75/0Q13D4aIJfxKJjGIungPzMP5ftifag0SZlVffzjug/OSZ\nIVkCNsQww2alEOO+bW1Dz49BnQKBgQDOLBZUVuv3YDs1UwP5qgEa8vKakkHv6CsG\nM/Oss7dc5Hv3ii0iMnqb8U6FMomY5A5+6zY6FFWhGbyRFFzewxTTipsBtmO+6U01\n6L6wP2M/xRgoe/ZpMvc0xTGluSQqwQfm20PTzgayQWdT36l9rxhLeG0hFU4vdBbb\nNmFTVBPcHQKBgAh/5liPgl6eXG2htHA6ZYyXTVhX6FPRS7l7/cyeJJyWHW5o4LeR\nDSXAL2tF6u6E3vEhu/rYQJK+9H/bLk/mKOsZ4eefF1HOseljHG4sdX0cZrYFqZB2\nVjYO4Y00dgEJUY8iAQgtmWwv2sFJBS7k2Yhy71gXhuwoPT8BS4GSqtUpAoGBAIPh\ny77Tg0nQcs9fdRGFYAOfGPUrTaZq+uqS3PLCWy6+sVXdO5W+eJO8PiAR/dahO2yQ\nhTWNwGC3F9ouDmIoo+/Vn+Xuh8udbVhos2IGijRGnXd4JF2SznMhGOsLjUkUBTv1\nUmPwTHRGRhRu4/qTwJS2Sgh5mnPcbKp5FLS6+aE5AoGBAKqILOVe/WmLA+KVHZLS\nftqTggKOtWMzLlNrOyJa6gR5pFZ5zgUmAjk6TVKp8lG9EBaFKNR82FPRJwTZV9Nn\n4X/eA2BLyXd6J5Tjm/R1gEa+vW7F8lnMsemyS5B7tf6ig/zL9ShjkqRqARtcDdK6\nnUpLv75bzLfb5EbRDl4Y75K3\n-----END PRIVATE KEY-----\n",
+  "client_email": "audit-dashboard@audit-dashboard-463909.iam.gserviceaccount.com",
+  "client_id": "110066973650302533798",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/audit-dashboard%40audit-dashboard-463909.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
