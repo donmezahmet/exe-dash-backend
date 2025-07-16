@@ -913,7 +913,7 @@ app.get('/api/login-credentials', async (req, res) => {
 
     const response = await sheets.spreadsheets.values.get({
       auth: authClient,
-      spreadsheetId: '1E3gbuytbUbFAseSaiqYbIir4nYDi9BhI69oxrcM2ojM',
+      spreadsheetId: '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc',
       range: "'LoginData'!A1:B1", // Yeni adla tam ve güvenli tanım
     });
 
