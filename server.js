@@ -4,6 +4,7 @@ const axios = require('axios');
 const cors = require('cors');
 const app = express();
 const PORT = 3000;
+const { google } = require('googleapis');
 
 app.use(cors({
   origin: '*',
@@ -30,6 +31,20 @@ const authHeader = {
     Accept: 'application/json'
   }
 };
+
+// ✅ Google Sheets Auth – Jira'dan bağımsız yapı
+const { google } = require('googleapis'); // üstte tanımlamadıysan buraya koyabilirsin
+
+const serviceAccountBase64 = process.env.GOOGLE_SERVICE_ACCOUNT_BASE64;
+const serviceAccount = JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf8'));
+
+const auth = new google.auth.GoogleAuth({
+  credentials: serviceAccount,
+  scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+});
+
+const sheets = google.sheets('v4');
+
 
 async function getAllIssues(jql) {
   const maxResults = 100;
@@ -808,37 +823,69 @@ const auditYear = issue.fields.customfield_16447?.value || 'Unknown';
 
 
 app.get('/api/unique-audit-projects-by-year', async (req, res) => {
-  const PROJECT_KEY = 'IAP2';
+  const PROJECT_KEY = 'IAP2'; // Yeni proje anahtarı
 
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Task"`;
     const issues = await getAllIssues(jql);
 
-    const validStatuses = ['Pre Closing Meeting', 'Closing Meeting', 'Completed'];
     const yearCountMap = {};
 
     issues.forEach(issue => {
-      const status = issue.fields.status?.name;
-      if (!validStatuses.includes(status)) return;
-
       const yearRaw = issue.fields.customfield_16447;
       const year = typeof yearRaw === 'object' && yearRaw?.value
         ? yearRaw.value
         : yearRaw || 'Unknown';
 
-      if (!yearCountMap[year]) yearCountMap[year] = 0;
+      if (!yearCountMap[year]) {
+        yearCountMap[year] = 0;
+      }
+
       yearCountMap[year]++;
     });
 
     const result = Object.entries(yearCountMap).map(([year, count]) => ({
       year,
       count
-    })).sort((a, b) => b.year.localeCompare(a.year));
+    })).sort((a, b) => b.year.localeCompare(a.year)); // Yıl azalan sırada
 
     res.json(result);
   } catch (err) {
     console.error('Error fetching audit project count:', err?.response?.data || err.message);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/google-sheet-data', async (req, res) => {
+  try {
+    const authClient = await auth.getClient();
+
+    const response = await sheets.spreadsheets.values.get({
+      auth: authClient,
+      spreadsheetId: '1zuoue1faA_V4GOA7AgmOOBSRd1v-15-9',
+      range: 'B133:G141', // TOTAL satırı hariç
+    });
+
+    const rows = response.data.values;
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'No data found in the sheet' });
+    }
+
+    const years = rows[0].slice(1); // ["2021", ..., "2025"]
+    const data = rows.slice(1).map(row => {
+      const type = row[0];
+      const rowData = { Type: type };
+      years.forEach((year, index) => {
+        rowData[year] = parseInt((row[index + 1] || "0").replace(/,/g, '')) || 0;
+      });
+      return rowData;
+    });
+
+    res.json(data);
+  } catch (error) {
+    console.error('Google Sheet API error:', error);
+    res.status(500).json({ error: 'Failed to fetch Google Sheet data' });
   }
 });
 
