@@ -862,8 +862,8 @@ app.get('/api/google-sheet-data', async (req, res) => {
 
     const response = await sheets.spreadsheets.values.get({
       auth: authClient,
-      spreadsheetId: '1zuoue1faA_V4GOA7AgmOOBSRd1v-15-9',
-      range: 'B133:G141', // TOTAL satırı hariç
+      spreadsheetId: '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc', // yeni sheet ID
+      range: 'B133', // test için sadece bir hücre
     });
 
     const rows = response.data.values;
@@ -872,22 +872,13 @@ app.get('/api/google-sheet-data', async (req, res) => {
       return res.status(404).json({ error: 'No data found in the sheet' });
     }
 
-    const years = rows[0].slice(1); // ["2021", ..., "2025"]
-    const data = rows.slice(1).map(row => {
-      const type = row[0];
-      const rowData = { Type: type };
-      years.forEach((year, index) => {
-        rowData[year] = parseInt((row[index + 1] || "0").replace(/,/g, '')) || 0;
-      });
-      return rowData;
-    });
-
-    res.json(data);
+    res.json({ result: rows });
   } catch (error) {
     console.error('Google Sheet API error:', error);
     res.status(500).json({ error: 'Failed to fetch Google Sheet data' });
   }
 });
+
 
 
 
