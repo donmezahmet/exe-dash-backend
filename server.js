@@ -880,6 +880,29 @@ app.get('/api/google-sheet-data', async (req, res) => {
 });
 
 
+app.get('/api/fraud-impact-local', async (req, res) => {
+  try {
+    const authClient = await auth.getClient();
+
+    const response = await sheets.spreadsheets.values.get({
+      auth: authClient,
+      spreadsheetId: '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc',
+      range: 'Getir Data!B145:G154',
+    });
+
+    const rows = response.data.values;
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'No data found in the sheet' });
+    }
+
+    res.json({ result: rows });
+  } catch (error) {
+    console.error('Google Sheet API error:', error);
+    res.status(500).json({ error: 'Failed to fetch Google Sheet data' });
+  }
+});
+
 
 
 
