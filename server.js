@@ -863,7 +863,7 @@ app.get('/api/google-sheet-data', async (req, res) => {
     const response = await sheets.spreadsheets.values.get({
       auth: authClient,
       spreadsheetId: '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc', // yeni sheet ID
-      range: 'Sheet1!B133:G142',
+      range: 'Getir Data!B133:G142',
     });
 
     const rows = response.data.values;
