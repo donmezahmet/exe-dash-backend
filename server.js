@@ -909,12 +909,15 @@ app.get('/api/fraud-impact-local', async (req, res) => {
 
 app.get('/api/login-credentials', async (req, res) => {
   try {
+    const authClient = await auth.getClient();
+
     const response = await sheets.spreadsheets.values.get({
+      auth: authClient,
       spreadsheetId: '1E3gbuytbUbFAseSaiqYbIir4nYDi9BhI69oxrcM2ojM',
-      range: 'Sheet4!A1:B1', // A1: username, B1: password
+      range: "'LoginData'!A1:B1", // Yeni adla tam ve güvenli tanım
     });
 
-    const [row] = response.data.values || [];
+    const [row] = response.data.values;
 
     if (!row || row.length < 2) {
       return res.status(404).json({ error: 'Username or password not found' });
@@ -928,6 +931,7 @@ app.get('/api/login-credentials', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 
 
