@@ -33,7 +33,7 @@ const authHeader = {
 };
 
 // ✅ Google Sheets Auth – Jira'dan bağımsız yapı
-const { google } = require('googleapis'); // üstte tanımlamadıysan buraya koyabilirsin
+
 
 const serviceAccountBase64 = process.env.GOOGLE_SERVICE_ACCOUNT_BASE64;
 const serviceAccount = JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf8'));
