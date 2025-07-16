@@ -903,26 +903,23 @@ app.get('/api/fraud-impact-local', async (req, res) => {
   }
 });
 
-app.get("/api/login-credentials", async (req, res) => {
+app.get('/api/login-credentials', async (req, res) => {
   try {
-    const doc = new GoogleSpreadsheet("1E3gbuytbUbFAseSaiqYbIir4nYDi9BhI69oxrcM2ojM");
-    await doc.useServiceAccountAuth({
-      client_email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    });
-    await doc.loadInfo();
-    const sheet = doc.sheetsByIndex[0]; // ilk sayfa (Getir Data)
-    await sheet.loadCells("A2:B2"); // Hücreleri yükle
+    const doc = await loadSheet('1E3gbuytbUbFAseSaiqYbIir4nYDi9BhI69oxrcM2ojM');
+    const sheet = doc.sheetsByTitle['Sheet1']; // Doğru Sheet adı
 
-    const username = sheet.getCellByA1("A2").value;
-    const password = sheet.getCellByA1("B2").value;
+    await sheet.loadCells('A2:B2');
+
+    const username = sheet.getCellByA1('A2').value;
+    const password = sheet.getCellByA1('B2').value;
 
     res.json({ username, password });
   } catch (error) {
-    console.error("Login API Error:", error);
-    res.status(500).send("Internal Server Error");
+    console.error('Login API Error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 
 
