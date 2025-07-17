@@ -932,6 +932,28 @@ app.get('/api/login-credentials', async (req, res) => {
   }
 });
 
+app.get('/api/loss-prevention-summary', async (req, res) => {
+  try {
+    const authClient = await auth.getClient();
+
+    const response = await sheets.spreadsheets.values.get({
+      auth: authClient,
+      spreadsheetId: '1LWMD85QjLj7lrT2c8qg6qe62wLoO1UpjSW2qEsn0jPA',
+      range: `'2025 Özet'!A62:D69`,
+    });
+
+    const rows = response.data.values;
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'No data found in the sheet' });
+    }
+
+    res.json({ result: rows });
+  } catch (error) {
+    console.error('Loss Prevention API Error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 
 
