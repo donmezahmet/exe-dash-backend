@@ -955,6 +955,44 @@ app.get('/api/loss-prevention-summary', async (req, res) => {
   }
 });
 
+app.get('/api/fraud-impact-score-cards', async (req, res) => {
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      keyFile: 'credentials.json', // service account dosyan
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
+    });
+
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+
+    const sheetId = '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc';
+    const sheetName = 'Getir Data';
+
+    // Yıllar: C133:G133
+    const yearsRange = `${sheetName}!C133:G133`;
+    // Impact Values: C154:G154
+    const impactRange = `${sheetName}!C154:G154`;
+
+    const [yearsRes, impactsRes] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: yearsRange }),
+      sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: impactRange })
+    ]);
+
+    const years = yearsRes.data.values?.[0] || [];
+    const totals = impactsRes.data.values?.[0] || [];
+
+    if (years.length !== totals.length) {
+      return res.status(400).json({ error: 'Yıl ve veri sayısı uyuşmuyor.' });
+    }
+
+    res.json({ years, totals });
+  } catch (err) {
+    console.error('❌ Fraud Impact API Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 
 
 // Server Start
