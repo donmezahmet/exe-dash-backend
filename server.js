@@ -957,25 +957,24 @@ app.get('/api/loss-prevention-summary', async (req, res) => {
 
 app.get('/api/fraud-impact-score-cards', async (req, res) => {
   try {
+    const yearCells = ['C133', 'D133', 'E133', 'F133', 'G133'];
+    const impactCells = ['C142', 'D142', 'E142', 'F142', 'G142'];
+
+    const ranges = [...yearCells, ...impactCells].map(cell => `Getir Data!${cell}`);
+
     const doc = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc',
-      ranges: ['Getir Data!C133:G133', 'Getir Data!C154:G154'],
+      ranges,
     });
 
     const valueRanges = doc.data.valueRanges;
 
-    // Eğer veriler eksikse hata döndür
-    if (!valueRanges || valueRanges.length !== 2) {
-      return res.status(500).json({ error: `Gerekli satırlar eksik. Satır uzunluğu: ${valueRanges?.length}` });
+    if (!valueRanges || valueRanges.length !== 10) {
+      return res.status(500).json({ error: `Beklenen 10 hücre, ancak gelen: ${valueRanges?.length}` });
     }
 
-    const years = valueRanges[0].values[0];
-    const impacts = valueRanges[1].values[0];
-
-    // Eğer veri eksikse hata ver
-    if (!years || !impacts || years.length !== impacts.length) {
-      return res.status(500).json({ error: 'Yıl ve Impact verileri uyumsuz veya eksik.' });
-    }
+    const years = valueRanges.slice(0, 5).map(v => v.values?.[0]?.[0] || null);
+    const impacts = valueRanges.slice(5).map(v => v.values?.[0]?.[0] || null);
 
     const scoreCards = years.map((year, i) => ({
       year,
@@ -989,6 +988,7 @@ app.get('/api/fraud-impact-score-cards', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 
