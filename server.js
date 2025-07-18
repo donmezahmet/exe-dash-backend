@@ -957,14 +957,20 @@ app.get('/api/loss-prevention-summary', async (req, res) => {
 
 app.get('/api/fraud-impact-score-cards', async (req, res) => {
   try {
-    const yearCells = ['C133', 'D133', 'E133', 'F133', 'G133'];
-    const impactCells = ['C142', 'D142', 'E142', 'F142', 'G142'];
-
-    const ranges = [...yearCells, ...impactCells].map(cell => `Getir Data!${cell}`);
-
     const doc = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc',
-      ranges,
+      ranges: [
+        'Getir Data!C133', // year1
+        'Getir Data!D133', // year2
+        'Getir Data!E133', // year3
+        'Getir Data!F133', // year4
+        'Getir Data!G133', // year5
+        'Getir Data!C142', // impact1
+        'Getir Data!D142', // impact2
+        'Getir Data!E142', // impact3
+        'Getir Data!F142', // impact4
+        'Getir Data!G142', // impact5
+      ],
     });
 
     const valueRanges = doc.data.valueRanges;
@@ -973,13 +979,27 @@ app.get('/api/fraud-impact-score-cards', async (req, res) => {
       return res.status(500).json({ error: `Beklenen 10 hücre, ancak gelen: ${valueRanges?.length}` });
     }
 
-    const years = valueRanges.slice(0, 5).map(v => v.values?.[0]?.[0] || null);
-    const impacts = valueRanges.slice(5).map(v => v.values?.[0]?.[0] || null);
+    // Yıl değerleri
+    const year1 = valueRanges[0].values?.[0]?.[0] || null;
+    const year2 = valueRanges[1].values?.[0]?.[0] || null;
+    const year3 = valueRanges[2].values?.[0]?.[0] || null;
+    const year4 = valueRanges[3].values?.[0]?.[0] || null;
+    const year5 = valueRanges[4].values?.[0]?.[0] || null;
 
-    const scoreCards = years.map((year, i) => ({
-      year,
-      impact: impacts[i]
-    }));
+    // Impact değerleri
+    const impact1 = valueRanges[5].values?.[0]?.[0] || null;
+    const impact2 = valueRanges[6].values?.[0]?.[0] || null;
+    const impact3 = valueRanges[7].values?.[0]?.[0] || null;
+    const impact4 = valueRanges[8].values?.[0]?.[0] || null;
+    const impact5 = valueRanges[9].values?.[0]?.[0] || null;
+
+    const scoreCards = [
+      { year: year1, impact: impact1 },
+      { year: year2, impact: impact2 },
+      { year: year3, impact: impact3 },
+      { year: year4, impact: impact4 },
+      { year: year5, impact: impact5 },
+    ];
 
     res.json({ scoreCards });
 
