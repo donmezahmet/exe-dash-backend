@@ -957,41 +957,38 @@ app.get('/api/loss-prevention-summary', async (req, res) => {
 
 app.get('/api/fraud-impact-score-cards', async (req, res) => {
   try {
-    const { google } = require('googleapis');
-    const auth = new google.auth.GoogleAuth({
-      keyFile: 'credentials.json', // service account dosyan
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
+    const doc = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId: '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc',
+      ranges: ['Getir Data!C133:G133', 'Getir Data!C154:G154'],
     });
 
-    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const valueRanges = doc.data.valueRanges;
 
-    const sheetId = '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc';
-    const sheetName = 'Getir Data';
-
-    // Yıllar: C133:G133
-    const yearsRange = `${sheetName}!C133:G133`;
-    // Impact Values: C154:G154
-    const impactRange = `${sheetName}!C154:G154`;
-
-    const [yearsRes, impactsRes] = await Promise.all([
-      sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: yearsRange }),
-      sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: impactRange })
-    ]);
-
-    const years = yearsRes.data.values?.[0] || [];
-    const totals = impactsRes.data.values?.[0] || [];
-
-    if (years.length !== totals.length) {
-      return res.status(400).json({ error: 'Yıl ve veri sayısı uyuşmuyor.' });
+    // Eğer veriler eksikse hata döndür
+    if (!valueRanges || valueRanges.length !== 2) {
+      return res.status(500).json({ error: `Gerekli satırlar eksik. Satır uzunluğu: ${valueRanges?.length}` });
     }
 
-    res.json({ years, totals });
-  } catch (err) {
-    console.error('❌ Fraud Impact API Error:', err);
+    const years = valueRanges[0].values[0];
+    const impacts = valueRanges[1].values[0];
+
+    // Eğer veri eksikse hata ver
+    if (!years || !impacts || years.length !== impacts.length) {
+      return res.status(500).json({ error: 'Yıl ve Impact verileri uyumsuz veya eksik.' });
+    }
+
+    const scoreCards = years.map((year, i) => ({
+      year,
+      impact: impacts[i]
+    }));
+
+    res.json({ scoreCards });
+
+  } catch (error) {
+    console.error('Fraud Impact Score Cards Error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 
 
