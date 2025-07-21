@@ -1010,9 +1010,70 @@ app.get('/api/fraud-impact-score-cards', async (req, res) => {
 });
 
 
+// new api to be added into getir github
 
+app.get('/api/lp-impact-score-cards', async (req, res) => {
+  try {
+    const doc = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId: '1LWMD85QjLj7lrT2c8qg6qe62wLoO1UpjSW2qEsn0jPA',
+      ranges: [
+        '2025 Özet!B62', // year1
+         '2025 Özet!C62', // year2
+         '2025 Özet!D62', // year3
+         '2025 Özet!E62', // year4
+         '2025 Özet!F62', // year5
+         '2025 Özet!B69', // impact1
+        '2025 Özet!C69', // impact2
+        '2025 Özet!D69', // impact3
+        '2025 Özet!E69', // impact4
+        '2025 Özet!F69', // impact5
+      ],
+    });
+
+    const valueRanges = doc.data.valueRanges;
+
+    if (!valueRanges || valueRanges.length !== 10) {
+      return res.status(500).json({ error: `Beklenen 10 hücre, ancak gelen: ${valueRanges?.length}` });
+    }
+
+    // Yıl değerleri
+    const year1 = valueRanges[0].values?.[0]?.[0] || null;
+    const year2 = valueRanges[1].values?.[0]?.[0] || null;
+    const year3 = valueRanges[2].values?.[0]?.[0] || null;
+    const year4 = valueRanges[3].values?.[0]?.[0] || null;
+    const year5 = valueRanges[4].values?.[0]?.[0] || null;
+
+    // Impact değerleri
+    const impact1 = valueRanges[5].values?.[0]?.[0] || null;
+    const impact2 = valueRanges[6].values?.[0]?.[0] || null;
+    const impact3 = valueRanges[7].values?.[0]?.[0] || null;
+    const impact4 = valueRanges[8].values?.[0]?.[0] || null;
+    const impact5 = valueRanges[9].values?.[0]?.[0] || null;
+
+    const scoreCards = [
+      { year: year1, impact: impact1 },
+      { year: year2, impact: impact2 },
+      { year: year3, impact: impact3 },
+      { year: year4, impact: impact4 },
+      { year: year5, impact: impact5 },
+    ];
+
+    res.json({ scoreCards });
+
+  } catch (error) {
+    console.error('LP Impact Score Cards Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+app.get(/(.*)/, (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
+});
 
 // Server Start
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
 });
+
