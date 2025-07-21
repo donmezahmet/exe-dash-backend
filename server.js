@@ -1069,6 +1069,38 @@ app.get('/api/lp-impact-score-cards', async (req, res) => {
   }
 });
 
+// yeni api -- getire ekle
+
+app.get('/api/audit-projects-by-year', async (req, res) => {
+  const PROJECT_KEY = 'IAP2';
+  const VALID_STATUSES = ['Pre Closing', 'Closing', 'Completed'];
+
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = Task AND status in (${VALID_STATUSES.map(s => `"${s}"`).join(', ')}) ORDER BY created DESC`;
+    const issues = await getAllIssues(jql);
+
+    const grouped = {};
+
+    issues.forEach(issue => {
+      const yearRaw = issue.fields.customfield_16447;
+      const year = typeof yearRaw === 'object' ? yearRaw?.value : (yearRaw || 'Unknown');
+      const key = issue.key;
+
+      if (!grouped[year]) grouped[year] = new Set();
+      grouped[year].add(key); // Aynı audit key birden fazla varsa bile sadece bir kez say
+    });
+
+    const result = Object.entries(grouped).map(([year, set]) => ({
+      auditYear: year,
+      count: set.size
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching audit projects by year:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch audit projects by year' });
+  }
+});
 
 
 app.get(/(.*)/, (req, res) => {
