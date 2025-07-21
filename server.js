@@ -1073,7 +1073,7 @@ app.get('/api/lp-impact-score-cards', async (req, res) => {
 
 app.get('/api/audit-projects-by-year', async (req, res) => {
   const PROJECT_KEY = 'IAP2';
-  const VALID_STATUSES = ['Pre Closing', 'Closing', 'Completed'];
+  const VALID_STATUSES = ['Pre Closing Meeting', 'Closing Meeting', 'Completed'];
 
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = Task AND status in (${VALID_STATUSES.map(s => `"${s}"`).join(', ')}) ORDER BY created DESC`;
