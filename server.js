@@ -767,6 +767,8 @@ app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
       const auditYearRaw = issue.fields.customfield_16447;
       const auditYear = typeof auditYearRaw === 'object' ? auditYearRaw?.value : (auditYearRaw || 'Unknown');
       const risk = issue.fields.customfield_12557?.value || 'Unassigned';
+// yeni eklenecek
+  const status = issue.fields.status?.name || 'Unknown';
 
       const key = `${projectName}___${auditYear}`;  // unique key
 
@@ -774,6 +776,7 @@ app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
         result[key] = {
           project: projectName,
           year: auditYear,
+            status: status,  // <---- burası eklendi
           Critical: 0, High: 0, Medium: 0, Low: 0
         };
       }
