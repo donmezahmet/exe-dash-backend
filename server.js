@@ -1144,7 +1144,8 @@ app.get('/api/finding-actions-export', async (req, res) => {
           actionResponsible: issue.fields.customfield_12556 || '',
           actionResponsibleEmail: issue.fields.customfield_19645 || '',
           auditName: issue.fields.customfield_12126 || '',       
-          auditYear: issue.fields.customfield_16447 || ''        
+          auditYear: issue.fields.customfield_16447?.value || '',
+      
         });
       }
     });
