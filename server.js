@@ -1136,6 +1136,8 @@ app.get('/api/finding-actions-export', async (req, res) => {
       if (auditData) {
         results.push({
           ...auditData,
+              auditName: issue.fields.customfield_12126 || '',       
+          auditYear: issue.fields.customfield_16447?.value || '',
           actionSummary: issue.fields.summary || '',
           actionDescription: issue.fields.description || '',
           actionStatus: issue.fields.status?.name || '',
@@ -1143,8 +1145,7 @@ app.get('/api/finding-actions-export', async (req, res) => {
           revisedDueDate: issue.fields.customfield_12129 || '',
           actionResponsible: issue.fields.customfield_12556 || '',
           actionResponsibleEmail: issue.fields.customfield_19645 || '',
-          auditName: issue.fields.customfield_12126 || '',       
-          auditYear: issue.fields.customfield_16447?.value || '',
+      
       
         });
       }
