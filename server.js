@@ -1126,19 +1126,22 @@ app.get('/api/finding-actions-export', async (req, res) => {
     const actionJQL = `project = ${PROJECT_KEY} AND issuetype = "Finding Action" ORDER BY created DESC`;
     const actionIssues = await getAllIssues(actionJQL);
 
+    const allowedStatuses = ['Open', 'Overdue', 'Completed']; // ✅ Sadece bu statüler dahil
+
     // Audit Finding ile eşleşen action'ları işleyip export için formatla
     const results = [];
 
     actionIssues.forEach(issue => {
       const parentKey = issue.fields.parent?.key;
       const auditData = auditFindingMap[parentKey];
+      const actionStatus = issue.fields.status?.name || '';
 
-      if (auditData) {
+      if (auditData && allowedStatuses.includes(actionStatus)) {
         results.push({
           ...auditData,
           actionSummary: issue.fields.summary || '',
           actionDescription: issue.fields.description || '',
-          actionStatus: issue.fields.status?.name || '',
+          actionStatus: actionStatus,
           dueDate: issue.fields.duedate || '',
           revisedDueDate: issue.fields.customfield_12129 || '',
           actionResponsible: issue.fields.customfield_12556 || '',
@@ -1146,6 +1149,14 @@ app.get('/api/finding-actions-export', async (req, res) => {
         });
       }
     });
+
+    res.json(results);
+  } catch (error) {
+    console.error("Export API error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 
     res.json(results);
   } catch (error) {
