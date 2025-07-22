@@ -1126,7 +1126,7 @@ app.get('/api/finding-actions-export', async (req, res) => {
     const actionJQL = `project = ${PROJECT_KEY} AND issuetype = "Finding Action" ORDER BY created DESC`;
     const actionIssues = await getAllIssues(actionJQL);
 
-    const allowedStatuses = ['Open', 'Overdue', 'Completed']; // ✅ Sadece bu statüler dahil
+    const allowedStatuses = ['Open', 'Overdue', 'Delayed']; // ✅ Sadece bu statüler dahil
 
     // Audit Finding ile eşleşen action'ları işleyip export için formatla
     const results = [];
