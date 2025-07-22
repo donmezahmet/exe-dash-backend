@@ -1106,28 +1106,53 @@ app.get('/api/audit-projects-by-year', async (req, res) => {
 
 app.get('/api/finding-actions-export', async (req, res) => {
   try {
-    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action" ORDER BY created DESC`;
-    const issues = await getAllIssues(jql);
+    // 1. Audit Finding verilerini çek
+    const auditFindingJQL = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
+    const auditFindingIssues = await getAllIssues(auditFindingJQL);
 
-    const results = issues.map(issue => ({
-      auditName: issue.fields.customfield_12126 || 'Unassigned',
-      auditYear: typeof issue.fields.customfield_16447 === 'object'
-        ? issue.fields.customfield_16447?.value
-        : issue.fields.customfield_16447 || 'Unknown',
-      actionDescription: issue.fields.summary || '',
-      dueDate: issue.fields.duedate || '',
-      revisedDueDate: issue.fields.customfield_12129 || '',
-      actionResponsible: issue.fields.customfield_12556 || '',
-      actionResponsibleEmail: issue.fields.customfield_19645 || '',
-      parentKey: issue.fields.parent?.key || ''
-    }));
+    const auditFindingsMap = {};
+    auditFindingIssues.forEach(issue => {
+      auditFindingsMap[issue.key] = {
+        auditFindingKey: issue.key,
+        auditFindingSummary: issue.fields.summary || '',
+        auditFindingDescription: issue.fields.description || '',
+        auditFindingStatus: issue.fields.status?.name || ''
+      };
+    });
+
+    // 2. Finding Action verilerini çek
+    const findingActionJQL = `project = ${PROJECT_KEY} AND issuetype = "Finding Action" ORDER BY created DESC`;
+    const findingActionIssues = await getAllIssues(findingActionJQL);
+
+    // 3. Eşleştirme ve çıktı
+    const results = findingActionIssues.map(issue => {
+      const parentKey = issue.fields.parent?.key || '';
+      const matchedFinding = auditFindingsMap[parentKey] || {};
+
+      return {
+        auditFindingKey: matchedFinding.auditFindingKey || parentKey || '',
+        auditFindingSummary: matchedFinding.auditFindingSummary || '',
+        auditFindingDescription: matchedFinding.auditFindingDescription || '',
+        auditFindingStatus: matchedFinding.auditFindingStatus || '',
+        actionDescription: issue.fields.summary || '',
+        auditName: issue.fields.customfield_12126 || 'Unassigned',
+        auditYear: typeof issue.fields.customfield_16447 === 'object'
+          ? issue.fields.customfield_16447?.value
+          : issue.fields.customfield_16447 || 'Unknown',
+        dueDate: issue.fields.duedate || '',
+        revisedDueDate: issue.fields.customfield_12129 || '',
+        actionResponsible: issue.fields.customfield_12556 || '',
+        actionResponsibleEmail: issue.fields.customfield_19645 || ''
+      };
+    });
 
     res.json(results);
   } catch (error) {
-    console.error('Error fetching Finding Action data:', error?.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to fetch Finding Action data.' });
+    console.error('Error exporting Finding Actions + Audit Findings:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to export combined data.' });
   }
 });
+
 
 
 
