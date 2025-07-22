@@ -1122,11 +1122,9 @@ app.get('/api/finding-actions-export', async (req, res) => {
       };
     });
 
-    // Finding Action'ları al
-    const actionJQL = `project = ${PROJECT_KEY} AND issuetype = "Finding Action" ORDER BY created DESC`;
+    // Finding Action'ları al (status = Open, Overdue, Completed)
+    const actionJQL = `project = ${PROJECT_KEY} AND issuetype = "Finding Action" AND status in ("Open", "Overdue", "DELAYED") ORDER BY created DESC`;
     const actionIssues = await getAllIssues(actionJQL);
-
-    const allowedStatuses = ['Open', 'Overdue', 'DELAYED']; // ✅ Sadece bu statüler dahil
 
     // Audit Finding ile eşleşen action'ları işleyip export için formatla
     const results = [];
@@ -1134,18 +1132,19 @@ app.get('/api/finding-actions-export', async (req, res) => {
     actionIssues.forEach(issue => {
       const parentKey = issue.fields.parent?.key;
       const auditData = auditFindingMap[parentKey];
-      const actionStatus = issue.fields.status?.name || '';
 
-      if (auditData && allowedStatuses.includes(actionStatus)) {
+      if (auditData) {
         results.push({
           ...auditData,
           actionSummary: issue.fields.summary || '',
           actionDescription: issue.fields.description || '',
-          actionStatus: actionStatus,
+          actionStatus: issue.fields.status?.name || '',
           dueDate: issue.fields.duedate || '',
           revisedDueDate: issue.fields.customfield_12129 || '',
           actionResponsible: issue.fields.customfield_12556 || '',
-          actionResponsibleEmail: issue.fields.customfield_19645 || ''
+          actionResponsibleEmail: issue.fields.customfield_19645 || '',
+          auditName: issue.fields.customfield_12126 || '',       
+          auditYear: issue.fields.customfield_16447 || ''        
         });
       }
     });
@@ -1153,7 +1152,7 @@ app.get('/api/finding-actions-export', async (req, res) => {
     res.json(results);
   } catch (error) {
     console.error("Export API error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
