@@ -1102,6 +1102,34 @@ app.get('/api/audit-projects-by-year', async (req, res) => {
   }
 });
 
+// yeni api excel export icin
+
+app.get('/api/finding-actions-export', async (req, res) => {
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action" ORDER BY created DESC`;
+    const issues = await getAllIssues(jql);
+
+    const results = issues.map(issue => ({
+      auditName: issue.fields.customfield_12126 || 'Unassigned',
+      auditYear: typeof issue.fields.customfield_16447 === 'object'
+        ? issue.fields.customfield_16447?.value
+        : issue.fields.customfield_16447 || 'Unknown',
+      actionDescription: issue.fields.summary || '',
+      dueDate: issue.fields.duedate || '',
+      revisedDueDate: issue.fields.customfield_12129 || '',
+      actionResponsible: issue.fields.customfield_12556 || '',
+      actionResponsibleEmail: issue.fields.customfield_19645 || '',
+      parentKey: issue.fields.parent?.key || ''
+    }));
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching Finding Action data:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch Finding Action data.' });
+  }
+});
+
+
 
 app.get(/(.*)/, (req, res) => {
   res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
