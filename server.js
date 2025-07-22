@@ -1106,52 +1106,54 @@ app.get('/api/audit-projects-by-year', async (req, res) => {
 
 app.get('/api/finding-actions-export', async (req, res) => {
   try {
-    // 1. Audit Finding verilerini çek
-    const auditFindingJQL = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" ORDER BY created DESC`;
-    const auditFindingIssues = await getAllIssues(auditFindingJQL);
+    // Audit Finding'leri al (sadece status = Open)
+    const findingJQL = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" AND status = "Open" ORDER BY created DESC`;
+    const findingIssues = await getAllIssues(findingJQL);
 
-    const auditFindingsMap = {};
-    auditFindingIssues.forEach(issue => {
-      auditFindingsMap[issue.key] = {
-        auditFindingKey: issue.key,
-        auditFindingSummary: issue.fields.summary || '',
-        auditFindingDescription: issue.fields.description || '',
-        auditFindingStatus: issue.fields.status?.name || ''
+    // Key bazlı map oluştur
+    const auditFindingMap = {};
+    findingIssues.forEach(issue => {
+      const key = issue.key;
+      auditFindingMap[key] = {
+        auditKey: key,
+        auditSummary: issue.fields.summary || '',
+        description: issue.fields.description || '',
+        status: issue.fields.status?.name || ''
       };
     });
 
-    // 2. Finding Action verilerini çek
-    const findingActionJQL = `project = ${PROJECT_KEY} AND issuetype = "Finding Action" ORDER BY created DESC`;
-    const findingActionIssues = await getAllIssues(findingActionJQL);
+    // Finding Action'ları al
+    const actionJQL = `project = ${PROJECT_KEY} AND issuetype = "Finding Action" ORDER BY created DESC`;
+    const actionIssues = await getAllIssues(actionJQL);
 
-    // 3. Eşleştirme ve çıktı
-    const results = findingActionIssues.map(issue => {
-      const parentKey = issue.fields.parent?.key || '';
-      const matchedFinding = auditFindingsMap[parentKey] || {};
+    // Audit Finding ile eşleşen action'ları işleyip export için formatla
+    const results = [];
 
-      return {
-        auditFindingKey: matchedFinding.auditFindingKey || parentKey || '',
-        auditFindingSummary: matchedFinding.auditFindingSummary || '',
-        auditFindingDescription: matchedFinding.auditFindingDescription || '',
-        auditFindingStatus: matchedFinding.auditFindingStatus || '',
-        actionDescription: issue.fields.summary || '',
-        auditName: issue.fields.customfield_12126 || 'Unassigned',
-        auditYear: typeof issue.fields.customfield_16447 === 'object'
-          ? issue.fields.customfield_16447?.value
-          : issue.fields.customfield_16447 || 'Unknown',
-        dueDate: issue.fields.duedate || '',
-        revisedDueDate: issue.fields.customfield_12129 || '',
-        actionResponsible: issue.fields.customfield_12556 || '',
-        actionResponsibleEmail: issue.fields.customfield_19645 || ''
-      };
+    actionIssues.forEach(issue => {
+      const parentKey = issue.fields.parent?.key;
+      const auditData = auditFindingMap[parentKey];
+
+      if (auditData) {
+        results.push({
+          ...auditData,
+          actionSummary: issue.fields.summary || '',
+          actionDescription: issue.fields.description || '',
+          actionStatus: issue.fields.status?.name || '',
+          dueDate: issue.fields.duedate || '',
+          revisedDueDate: issue.fields.customfield_12129 || '',
+          actionResponsible: issue.fields.customfield_12556 || '',
+          actionResponsibleEmail: issue.fields.customfield_19645 || ''
+        });
+      }
     });
 
     res.json(results);
   } catch (error) {
-    console.error('Error exporting Finding Actions + Audit Findings:', error?.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to export combined data.' });
+    console.error('Error fetching Finding Action export data:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch Finding Action export data.' });
   }
 });
+
 
 
 
