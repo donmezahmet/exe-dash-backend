@@ -1159,6 +1159,37 @@ app.get('/api/finding-actions-export', async (req, res) => {
   }
 });
 
+// ✅ YENİ EKLENEN API: Kontrol Elementi ve Riske Göre Bilet Detayları
+app.get('/api/finding-details-by-control-and-risk', async (req, res) => {
+  const { control, risk } = req.query;
+  if (!control || !risk) {
+    return res.status(400).json({ error: 'Missing control or risk parameter' });
+  }
+
+  try {
+    const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
+    const issues = await getAllIssues(jql);
+
+    const result = issues.filter(issue => {
+      // Gelen 'control' ve 'risk' değerlerine göre filtrele
+      const controlField = issue.fields.customfield_19635;
+      const controlVal = typeof controlField === 'object' && controlField?.value ? controlField.value : 'Unassigned';
+      const riskVal = issue.fields.customfield_12557?.value || 'Unassigned';
+      return controlVal === control && riskVal === risk;
+    }).map(issue => ({
+      // Sadece 'key' ve 'summary' alanlarını al
+      key: issue.key,
+      summary: issue.fields.summary
+    }));
+
+    // Sonucu JSON olarak gönder
+    res.json(result);
+
+  } catch (error) {
+    console.error('Failed to fetch filtered findings by control and risk:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch filtered findings by control and risk' });
+  }
+});
 
 
 
