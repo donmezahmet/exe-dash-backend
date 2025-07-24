@@ -942,7 +942,7 @@ app.get('/api/loss-prevention-summary', async (req, res) => {
     const response = await sheets.spreadsheets.values.get({
       auth: authClient,
       spreadsheetId: '1LWMD85QjLj7lrT2c8qg6qe62wLoO1UpjSW2qEsn0jPA',
-      range: `'2025 Özet'!B62:F69`,
+      range: `'2025 Özet'!A62:F69`,
     });
 
     const rows = response.data.values;
