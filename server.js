@@ -963,16 +963,16 @@ app.get('/api/fraud-impact-score-cards', async (req, res) => {
     const doc = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc',
       ranges: [
-        'Getir Data!C133', // year1
-        'Getir Data!D133', // year2
-        'Getir Data!E133', // year3
-        'Getir Data!F133', // year4
-        'Getir Data!G133', // year5
-        'Getir Data!C142', // impact1
-        'Getir Data!D142', // impact2
-        'Getir Data!E142', // impact3
-        'Getir Data!F142', // impact4
-        'Getir Data!G142', // impact5
+        'Getir Data!B133', // year1
+        'Getir Data!C133', // year2
+        'Getir Data!D133', // year3
+        'Getir Data!E133', // year4
+        'Getir Data!F133', // year5
+        'Getir Data!B142', // impact1
+        'Getir Data!C142', // impact2
+        'Getir Data!D142', // impact3
+        'Getir Data!E142', // impact4
+        'Getir Data!F142', // impact5
       ],
     });
 
