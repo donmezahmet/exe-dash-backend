@@ -150,7 +150,7 @@ app.get('/api/auth/callback/google',
   passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' }),
   (req, res) => {
     // Successful authentication, redirect to dashboard
-    res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173');
+    res.redirect(process.env.REDIRECT_URL || 'http://localhost:5173');
   }
 );
 
