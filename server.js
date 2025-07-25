@@ -1012,7 +1012,7 @@ app.get('/api/fraud-impact-local', requireAuth, async (req, res) => {
 
 
 
-app.get('/api/login-credentials', async (req, res) => {
+app.get('/api/login-credentials', requireAuth, async (req, res) => {
   try {
     const authClient = await auth.getClient();
 
@@ -1205,7 +1205,7 @@ app.get('/api/audit-projects-by-year', requireAuth, async (req, res) => {
 
 // yeni api excel export icin
 
-app.get('/api/finding-actions-export', async (req, res) => {
+app.get('/api/finding-actions-export', requireAuth, async (req, res) => {
   try {
     // Audit Finding'leri al (sadece status = Open)
     const findingJQL = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding" AND status = "Open" ORDER BY created DESC`;
@@ -1236,7 +1236,7 @@ app.get('/api/finding-actions-export', async (req, res) => {
 
       if (auditData) {
         results.push({
-           auditName: issue.fields.customfield_12126 || '',       
+           auditName: issue.fields.customfield_12126 || '',
           auditYear: issue.fields.customfield_16447?.value || '',
           ...auditData,
 
@@ -1247,8 +1247,8 @@ app.get('/api/finding-actions-export', async (req, res) => {
           revisedDueDate: issue.fields.customfield_12129 || '',
           actionResponsible: issue.fields.customfield_12556 || '',
           actionResponsibleEmail: issue.fields.customfield_19645 || '',
-      
-      
+
+
         });
       }
     });
@@ -1261,7 +1261,7 @@ app.get('/api/finding-actions-export', async (req, res) => {
 });
 
 // ✅ YENİ EKLENEN API: Kontrol Elementi ve Riske Göre Bilet Detayları
-app.get('/api/finding-details-by-control-and-risk', async (req, res) => {
+app.get('/api/finding-details-by-control-and-risk', requireAuth, async (req, res) => {
   const { control, risk } = req.query;
   if (!control || !risk) {
     return res.status(400).json({ error: 'Missing control or risk parameter' });
