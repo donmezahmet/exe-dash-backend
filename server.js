@@ -2,16 +2,79 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const session = require('express-session');
 const app = express();
 const PORT = 3000;
 const { google } = require('googleapis');
+const path = require('path');
 
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.ENV === 'production', // Set to true in production with HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 }));
 
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000', process.env.FRONTEND_URL],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  credentials: true
+}));
+
+app.use(express.json());
+
+// Google OAuth Strategy
+passport.use(
+  new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: `${process.env.BASE_URL}/api/auth/callback/google`,
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const userEmail = profile.emails[0].value;
+
+        const user = {
+          id: profile.id,
+          email: userEmail,
+          name: profile.displayName,
+          picture: profile.photos[0].value
+        };
+
+        return done(null, user);
+      } catch (error) {
+        return done(error, null);
+      }
+    }
+  )
+);
+
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+
+passport.deserializeUser((user, done) => {
+  done(null, user);
+});
+
+// Authentication middleware
+const requireAuth = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ error: 'Authentication required' });
+};
 
 const JIRA_DOMAIN = process.env.JIRA_DOMAIN;
 const JIRA_EMAIL = process.env.JIRA_EMAIL;
@@ -75,10 +138,51 @@ async function getAllIssues(jql) {
   return allIssues;
 }
 
-// === API Routes ===
+// === Authentication Routes ===
+
+// Google OAuth login route
+app.get('/api/auth/google', passport.authenticate('google', {
+  scope: ['profile', 'email']
+}));
+
+// Google OAuth callback route
+app.get('/api/auth/callback/google',
+  passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' }),
+  (req, res) => {
+    // Successful authentication, redirect to dashboard
+    res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173');
+  }
+);
+
+// Check authentication status
+app.get('/api/auth/status', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({
+      authenticated: true,
+      user: req.user,
+      loginType: 'google'
+    });
+  } else {
+    res.json({ authenticated: false });
+  }
+});
+
+// Logout route
+app.post('/api/auth/logout', (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    req.session.destroy(() => {
+      res.json({ success: true });
+    });
+  });
+});
+
+// === API Routes (Protected) ===
 
 // 1. General Issue List
-app.get('/api/issues', async (req, res) => {
+app.get('/api/issues', requireAuth, async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
@@ -89,7 +193,7 @@ app.get('/api/issues', async (req, res) => {
 });
 
 // 2. Audit Finding Summary with Action Count
-app.get('/api/finding-summary', async (req, res) => {
+app.get('/api/finding-summary', requireAuth, async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} ORDER BY created DESC`;
     const issues = await getAllIssues(jql);
@@ -117,7 +221,7 @@ app.get('/api/finding-summary', async (req, res) => {
 // 3. Findings by Year and Status (Bar Chart)
 // === Yeni: Audit Type filtresi ile bar chart verisi ===
 // === Güncellenmiş API: Findings by Year and Status (Bar Chart) ===
-app.get('/api/finding-status-by-year', async (req, res) => {
+app.get('/api/finding-status-by-year', requireAuth, async (req, res) => {
   const { auditTypes, auditCountries } = req.query;
 
   try {
@@ -154,7 +258,7 @@ app.get('/api/finding-status-by-year', async (req, res) => {
 });
 
 // 4. Finding Details by Year and/or Status
-app.get('/api/finding-details', async (req, res) => {
+app.get('/api/finding-details', requireAuth, async (req, res) => {
   const { year, status } = req.query;
   if (!status) return res.status(400).json({ error: 'Missing status parameter' });
 
@@ -170,7 +274,7 @@ const result = issues
     const issueStatus = issue.fields.status.name;
 
     const match = (year?.toString() === 'all' && issueStatus === status) || (normalizedYear === year?.toString() && issueStatus === status);
-    
+
     console.log({
       yearQuery: year,
       issueYearRaw: issueYear,
@@ -194,7 +298,7 @@ const result = issues
 });
 
 // 5. Status Distribution (Pie Chart)
-app.get('/api/finding-status-distribution', async (req, res) => {
+app.get('/api/finding-status-distribution', requireAuth, async (req, res) => {
   const { auditTypes, auditCountries } = req.query;
 
   try {
@@ -226,7 +330,7 @@ app.get('/api/finding-status-distribution', async (req, res) => {
 
 
 // 6. Horizontal Risk View (Text-Based)
-app.get('/api/risk-scale-horizontal', async (req, res) => {
+app.get('/api/risk-scale-horizontal', requireAuth, async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
@@ -250,7 +354,7 @@ app.get('/api/risk-scale-horizontal', async (req, res) => {
 });
 
 // 7. Internal Control Element × Risk Level Table
-app.get('/api/statistics-by-control-and-risk', async (req, res) => {
+app.get('/api/statistics-by-control-and-risk', requireAuth, async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
@@ -304,7 +408,7 @@ const control = typeof controlField === 'object' && controlField?.value ? contro
   }
 });
 // 8. Findings filtered by Control and Risk
-app.get('/api/statistics-by-control-and-risk', async (req, res) => {
+app.get('/api/statistics-by-control-and-risk', requireAuth, async (req, res) => {
   try {
     const selectedStatus = req.query.status;
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
@@ -361,7 +465,7 @@ app.get('/api/statistics-by-control-and-risk', async (req, res) => {
 });
 
 
-app.get('/api/statistics-by-type-and-risk', async (req, res) => {
+app.get('/api/statistics-by-type-and-risk', requireAuth, async (req, res) => {
   try {
     const selectedStatus = req.query.status;
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
@@ -417,9 +521,8 @@ app.get('/api/statistics-by-type-and-risk', async (req, res) => {
   }
 });
 
-
 // 9. Findings filtered by Type and Risk
-app.get('/api/finding-details-by-type-and-risk', async (req, res) => {
+app.get('/api/finding-details-by-type-and-risk', requireAuth, async (req, res) => {
   const { type, risk } = req.query;
   if (!type || !risk) return res.status(400).json({ error: 'Missing type or risk parameter' });
 
@@ -444,7 +547,7 @@ app.get('/api/finding-details-by-type-and-risk', async (req, res) => {
 });
 
 // 10. Audit Types – Jira'daki dropdown'dan unique audit type listesi getir
-app.get('/api/audit-types', async (req, res) => {
+app.get('/api/audit-types', requireAuth, async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
@@ -464,7 +567,7 @@ app.get('/api/audit-types', async (req, res) => {
 });
 
 // === Yeni API: Benzersiz Country değerlerini getir ===
-app.get('/api/audit-countries', async (req, res) => {
+app.get('/api/audit-countries', requireAuth, async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
@@ -484,7 +587,7 @@ app.get('/api/audit-countries', async (req, res) => {
 });
 
 // === Yeni API: Finding Action - Status Distribution ===
-app.get('/api/finding-action-status-distribution', async (req, res) => {
+app.get('/api/finding-action-status-distribution', requireAuth, async (req, res) => {
   const { auditTypes } = req.query;
 
   try {
@@ -521,7 +624,7 @@ app.get('/api/finding-action-status-distribution', async (req, res) => {
 });
 
 // Yeni API: Finding Actions - Status by Audit Lead (Short Text Version)
-app.get('/api/finding-action-status-by-lead', async (req, res) => {
+app.get('/api/finding-action-status-by-lead', requireAuth, async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
@@ -546,7 +649,7 @@ app.get('/api/finding-action-status-by-lead', async (req, res) => {
 });
 
 /// ✅ Yeni API alias: /api/yearly-audit-plan (updated for IAP2)
-app.get('/api/yearly-audit-plan', async (req, res) => {
+app.get('/api/yearly-audit-plan', requireAuth, async (req, res) => {
   const NEW_PROJECT_KEY = 'IAP2';  // Yeni proje anahtarı
 
   try {
@@ -595,7 +698,7 @@ app.get('/api/yearly-audit-plan', async (req, res) => {
 
 
 
-app.get('/api/finding-action-age-summary', async (req, res) => {
+app.get('/api/finding-action-age-summary', requireAuth, async (req, res) => {
   try {
     const leadFilter = req.query.lead;
 
@@ -662,7 +765,7 @@ app.get('/api/finding-action-age-summary', async (req, res) => {
   }
 });
 
-app.get('/api/finding-action-age-summary-delayed', async (req, res) => {
+app.get('/api/finding-action-age-summary-delayed', requireAuth, async (req, res) => {
   try {
     const leadFilter = req.query.lead;
 
@@ -730,7 +833,7 @@ app.get('/api/finding-action-age-summary-delayed', async (req, res) => {
   }
 });
 
-app.get('/api/investigation-counts', async (req, res) => {
+app.get('/api/investigation-counts', requireAuth, async (req, res) => {
   const ICT_PROJECT_KEY = 'ICT';
 
   try {
@@ -754,7 +857,7 @@ app.get('/api/investigation-counts', async (req, res) => {
 });
 
 // Yeni API: Risk dağılımı – Audit Project bazlı
-app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
+app.get('/api/finding-risk-distribution-by-project', requireAuth, async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Audit Finding"`;
     const issues = await getAllIssues(jql);
@@ -795,9 +898,8 @@ app.get('/api/finding-risk-distribution-by-project', async (req, res) => {
   }
 });
 
-
 // Yeni API: Finding Actions - Grouped by Audit Name and Status
-app.get('/api/finding-actions-by-audit-name-and-status', async (req, res) => {
+app.get('/api/finding-actions-by-audit-name-and-status', requireAuth, async (req, res) => {
   try {
     const jql = `project = ${PROJECT_KEY} AND issuetype = "Finding Action"`;
     const issues = await getAllIssues(jql);
@@ -827,7 +929,7 @@ const auditYear = issue.fields.customfield_16447?.value || 'Unknown';
 });
 
 
-app.get('/api/unique-audit-projects-by-year', async (req, res) => {
+app.get('/api/unique-audit-projects-by-year', requireAuth, async (req, res) => {
   const PROJECT_KEY = 'IAP2'; // Yeni proje anahtarı
 
   try {
@@ -861,7 +963,7 @@ app.get('/api/unique-audit-projects-by-year', async (req, res) => {
   }
 });
 
-app.get('/api/google-sheet-data', async (req, res) => {
+app.get('/api/google-sheet-data', requireAuth, async (req, res) => {
   try {
     const authClient = await auth.getClient();
 
@@ -885,7 +987,7 @@ app.get('/api/google-sheet-data', async (req, res) => {
 });
 
 
-app.get('/api/fraud-impact-local', async (req, res) => {
+app.get('/api/fraud-impact-local', requireAuth, async (req, res) => {
   try {
     const authClient = await auth.getClient();
 
@@ -935,7 +1037,7 @@ app.get('/api/login-credentials', async (req, res) => {
   }
 });
 
-app.get('/api/loss-prevention-summary', async (req, res) => {
+app.get('/api/loss-prevention-summary', requireAuth, async (req, res) => {
   try {
     const authClient = await auth.getClient();
 
@@ -958,7 +1060,7 @@ app.get('/api/loss-prevention-summary', async (req, res) => {
   }
 });
 
-app.get('/api/fraud-impact-score-cards', async (req, res) => {
+app.get('/api/fraud-impact-score-cards', requireAuth, async (req, res) => {
   try {
     const doc = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: '1Tk1X0b_9YvtCdF783SkbsSoqAe-QULhQ_3ud3py1MAc',
@@ -1012,10 +1114,9 @@ app.get('/api/fraud-impact-score-cards', async (req, res) => {
   }
 });
 
-
 // new api to be added into getir github
 
-app.get('/api/lp-impact-score-cards', async (req, res) => {
+app.get('/api/lp-impact-score-cards', requireAuth, async (req, res) => {
   try {
     const doc = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: '1LWMD85QjLj7lrT2c8qg6qe62wLoO1UpjSW2qEsn0jPA',
@@ -1071,7 +1172,7 @@ app.get('/api/lp-impact-score-cards', async (req, res) => {
 
 // yeni api -- getire ekle
 
-app.get('/api/audit-projects-by-year', async (req, res) => {
+app.get('/api/audit-projects-by-year', requireAuth, async (req, res) => {
   const PROJECT_KEY = 'IAP2';
   const VALID_STATUSES = ['Pre Closing Meeting', 'Closing Meeting', 'Completed'];
 
@@ -1196,11 +1297,11 @@ app.get('/api/finding-details-by-control-and-risk', async (req, res) => {
 
 
 app.get(/(.*)/, (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
+  // res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
+  res.send()
 });
 
 // Server Start
 app.listen(PORT, () => {
   console.log(`✅ Jira API Backend running at http://localhost:${PORT}`);
 });
-
