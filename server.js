@@ -55,7 +55,7 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: `${process.env.BASE_URL}/api/auth/callback/google`,
-      state: true,
+      state: false,
     },
     function verify(issuer, profile, cb) {
       console.log('🎉 VERIFY FUNCTION CALLED!');
