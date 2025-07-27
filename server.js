@@ -18,16 +18,41 @@ app.use(session({
   cookie: {
     secure: process.env.ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    sameSite: process.env.ENV === 'production' ? 'none' : 'lax',
   }
 }));
+
+console.log(JSON.stringify({
+  title: 'Session Configuration',
+  env: process.env.ENV,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: process.env.ENV === 'production' ? 'none' : 'lax',
+  },
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://donmezahmet.github.io',
+    process.env.FRONTEND_URL,
+    process.env.REDIRECT_URL
+  ],
+}, null ,4));
 
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', process.env.FRONTEND_URL],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://donmezahmet.github.io',
+    process.env.FRONTEND_URL,
+    process.env.REDIRECT_URL
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   credentials: true
