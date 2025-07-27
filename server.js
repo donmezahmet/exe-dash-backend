@@ -139,16 +139,38 @@ app.use(cors({
 }));
 
 app.use(express.json());
-// Authentication middleware
+
+// // Authentication middleware
+// const requireAuth = (req, res, next) => {
+//   console.log('🔍 Auth check:', {
+//     isAuthenticated: req.isAuthenticated(),
+//     sessionUser: req.session?.user ? 'EXISTS' : 'MISSING'
+//   });
+//
+//   if (req.isAuthenticated()) {
+//     return next();
+//   }
+//   res.status(401).json({ error: 'Authentication required' });
+// };
+
 const requireAuth = (req, res, next) => {
   console.log('🔍 Auth check:', {
     isAuthenticated: req.isAuthenticated(),
-    sessionUser: req.session?.user ? 'EXISTS' : 'MISSING'
+    sessionUser: req.session?.user ? 'EXISTS' : 'MISSING',
+    sessionContent: req.session
   });
 
+  // Manual auth için de destekle
   if (req.isAuthenticated()) {
     return next();
   }
+
+  if (req.session?.user) {
+    // Manuel session için user'ı req.user'a koy
+    req.user = req.session.user;
+    return next();
+  }
+
   res.status(401).json({ error: 'Authentication required' });
 };
 
@@ -225,34 +247,118 @@ app.get('/api/auth/google', (req, res, next) => {
   })(req, res, next);
 });
 
-// Google OAuth callback route
-app.get('/api/auth/callback/google',
-  (req, res, next) => {
-    console.log('Callback received:', {
-      session: req.session,
-      query: req.query,
-      error: req.query.error,
-      code: req.query.code
-    });
-    next();
-  },
-  passport.authenticate('google', {
-    failureRedirect: `${process.env.REDIRECT_URL || 'http://localhost:5173'}/login?error=oauth_failed`,
-    failureMessage: true,
-  }),
-  (req, res) => {
-    console.log('Authentication successful:', req.user);
-    res.redirect(process.env.REDIRECT_URL || 'http://localhost:5173');
-  }
-);
+// // Google OAuth callback route
+// app.get('/api/auth/callback/google',
+//   (req, res, next) => {
+//     console.log('Callback received:', {
+//       session: req.session,
+//       query: req.query,
+//       error: req.query.error,
+//       code: req.query.code
+//     });
+//     next();
+//   },
+//   passport.authenticate('google', {
+//     failureRedirect: `${process.env.REDIRECT_URL || 'http://localhost:5173'}/login?error=oauth_failed`,
+//     failureMessage: true,
+//   }),
+//   (req, res) => {
+//     console.log('Authentication successful:', req.user);
+//     res.redirect(process.env.REDIRECT_URL || 'http://localhost:5173');
+//   }
+// );
 
-// Check authentication status
+app.get('/api/auth/callback/google', async (req, res) => {
+  console.log('🔍 MANUAL CALLBACK TEST');
+  console.log('Query params:', req.query);
+
+  const { code, error } = req.query;
+
+  if (error) {
+    console.error('❌ OAuth error from Google:', error);
+    return res.redirect(`${process.env.REDIRECT_URL}?error=${error}`);
+  }
+
+  if (!code) {
+    console.error('❌ No authorization code received');
+    return res.redirect(`${process.env.REDIRECT_URL}?error=no_code`);
+  }
+
+  try {
+    console.log('🔍 Exchanging code for access token...');
+
+    // Token exchange
+    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      code: code,
+      grant_type: 'authorization_code',
+      redirect_uri: `${process.env.BASE_URL}/api/auth/callback/google`
+    });
+
+    console.log('✅ Token exchange successful');
+    console.log('Access token received:', tokenResponse.data.access_token ? 'YES' : 'NO');
+
+    // Get user profile
+    const userResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        Authorization: `Bearer ${tokenResponse.data.access_token}`
+      }
+    });
+
+    console.log('✅ User profile received:', userResponse.data);
+
+    // Manually save to session
+    req.session.user = {
+      id: userResponse.data.id,
+      email: userResponse.data.email,
+      name: userResponse.data.name,
+      picture: userResponse.data.picture
+    };
+
+    console.log('✅ User saved to session');
+    console.log('Session after save:', req.session);
+
+    // Redirect to frontend
+    res.redirect(process.env.REDIRECT_URL || 'http://localhost:5173');
+
+  } catch (error) {
+    console.error('❌ Manual callback error:', error.response?.data || error.message);
+    res.redirect(`${process.env.REDIRECT_URL}?error=manual_auth_failed&details=${encodeURIComponent(error.message)}`);
+  }
+});
+
+// // Check authentication status
+// app.get('/api/auth/status', (req, res) => {
+//   if (req.isAuthenticated()) {
+//     res.json({
+//       authenticated: true,
+//       user: req.user,
+//       loginType: 'google'
+//     });
+//   } else {
+//     res.json({ authenticated: false });
+//   }
+// });
+
 app.get('/api/auth/status', (req, res) => {
+  console.log('🔍 Status check:', {
+    isAuthenticated: req.isAuthenticated(),
+    sessionUser: req.session?.user ? 'EXISTS' : 'MISSING',
+    reqUser: req.user ? 'EXISTS' : 'MISSING'
+  });
+
   if (req.isAuthenticated()) {
     res.json({
       authenticated: true,
       user: req.user,
-      loginType: 'google'
+      loginType: 'passport'
+    });
+  } else if (req.session?.user) {
+    res.json({
+      authenticated: true,
+      user: req.session.user,
+      loginType: 'manual'
     });
   } else {
     res.json({ authenticated: false });
