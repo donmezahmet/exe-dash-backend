@@ -3,7 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GoogleStrategy = require('passport-google-oidc');
 const cookieSession = require('cookie-session');
 const app = express();
 const PORT = 3000;
@@ -40,23 +40,12 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: `${process.env.BASE_URL}/api/auth/callback/google`,
+      scope: ["profile"],
+      state: true,
     },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        const userEmail = profile.emails[0].value;
-
-        const user = {
-          id: profile.id,
-          email: userEmail,
-          name: profile.displayName,
-          picture: profile.photos[0].value
-        };
-
-        return done(null, user);
-      } catch (error) {
-        return done(error, null);
-      }
-    }
+    function verify(_issuer, profile, cb) {
+      return cb(null, profile);
+    },
   )
 );
 
