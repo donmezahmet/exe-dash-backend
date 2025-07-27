@@ -79,6 +79,22 @@ app.use(cookieSession({
   secure: process.env.ENV === 'production',
 }));
 
+app.use((request, _response, next) => {
+  if (request.session && !request.session.regenerate) {
+    request.session.regenerate = (cb) => {
+      cb();
+    };
+  }
+
+  if (request.session && !request.session.save) {
+    request.session.save = (cb) => {
+      cb();
+    };
+  }
+
+  next();
+});
+
 // Initialize Passport
 app.use(passport.session());
 app.use(passport.initialize());
