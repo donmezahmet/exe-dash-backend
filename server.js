@@ -38,13 +38,24 @@ console.log(JSON.stringify({
   }
 }, null, 4));
 
+app.use('/api/auth/', (req, res, next) => { // todo DEBUG
+  console.log('🔍 Auth Route:', {
+    url: req.url,
+    method: req.method,
+    query: req.query,
+    session: req.session,
+    user: req.user
+  });
+  next();
+});
+
 // Google OAuth Strategy
 passport.use(
   new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: `${process.env.BASE_URL}/api/auth/callback/google`,
-      state: false,
+      state: true,
     },
     function verify(issuer, profile, cb) {
       console.log('🎉 VERIFY FUNCTION CALLED!');
@@ -113,30 +124,6 @@ app.use((request, _response, next) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-console.log(JSON.stringify({
-  title: 'Session Configuration',
-  env: process.env.ENV,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000,
-    MaxAge: 24 * 60 * 60 * 1000,
-    sameSite: process.env.ENV === 'production' ? 'none' : 'lax',
-    SameSite: process.env.ENV === 'production' ? 'none' : 'lax',
-    httpOnly: true,
-    domain: process.env.ENV === 'production' ? '.onrender.com' : undefined,
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://donmezahmet.github.io',
-      'https://exe-dash-backend.onrender.com',
-      process.env.FRONTEND_URL,
-      process.env.REDIRECT_URL
-    ],
-  }
-}, null, 4));
-
 app.use(cors({
   origin: [
     'http://localhost:5173',
@@ -154,6 +141,11 @@ app.use(cors({
 app.use(express.json());
 // Authentication middleware
 const requireAuth = (req, res, next) => {
+  console.log('🔍 Auth check:', {
+    isAuthenticated: req.isAuthenticated(),
+    sessionUser: req.session?.user ? 'EXISTS' : 'MISSING'
+  });
+
   if (req.isAuthenticated()) {
     return next();
   }
@@ -231,17 +223,6 @@ app.get('/api/auth/google', (req, res, next) => {
   passport.authenticate('google', {
     scope: ['profile', 'email'] // ✅ Scope'u burada tanımla
   })(req, res, next);
-});
-
-app.use('/api/auth/', (req, res, next) => { // todo DEBUG
-  console.log('🔍 Auth Route:', {
-    url: req.url,
-    method: req.method,
-    query: req.query,
-    session: req.session,
-    user: req.user
-  });
-  next();
 });
 
 // Google OAuth callback route
