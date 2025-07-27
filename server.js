@@ -44,7 +44,22 @@ passport.use(
       state: true,
     },
     function verify(_issuer, profile, cb) {
-      return cb(null, profile);
+      console.log('OAuth Profile:', profile); // Debug için
+
+      try {
+        const user = {
+          id: profile.id,
+          email: profile.email || profile.emails?.[0]?.value,
+          name: profile.displayName || profile.name,
+          picture: profile.picture || profile.photos?.[0]?.value
+        };
+
+        console.log('Processed User:', user);
+        return cb(null, user);
+      } catch (error) {
+        console.error('Profile processing error:', error);
+        return cb(error, null);
+      }
     },
   )
 );
@@ -200,15 +215,42 @@ async function getAllIssues(jql) {
 // === Authentication Routes ===
 
 // Google OAuth login route
-app.get('/api/auth/google', passport.authenticate('google', {
-  scope: ['profile', 'email']
-}));
+app.get('/api/auth/google', (req, res, next) => {
+  console.log('Login attempt started');
+
+  passport.authenticate('google', {
+    scope: ['profile', 'email'] // ✅ Scope'u burada tanımla
+  })(req, res, next);
+});
+
+app.use('/api/auth/', (req, res, next) => { // todo DEBUG
+  console.log('🔍 Auth Route:', {
+    url: req.url,
+    method: req.method,
+    query: req.query,
+    session: req.session,
+    user: req.user
+  });
+  next();
+});
 
 // Google OAuth callback route
 app.get('/api/auth/callback/google',
-  passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' }),
+  (req, res, next) => {
+    console.log('Callback received:', {
+      session: req.session,
+      query: req.query,
+      error: req.query.error,
+      code: req.query.code
+    });
+    next();
+  },
+  passport.authenticate('google', {
+    failureRedirect: `${process.env.REDIRECT_URL || 'http://localhost:5173'}/login?error=oauth_failed`,
+    failureMessage: true,
+  }),
   (req, res) => {
-    // Successful authentication, redirect to dashboard
+    console.log('Authentication successful:', req.user);
     res.redirect(process.env.REDIRECT_URL || 'http://localhost:5173');
   }
 );
