@@ -17,8 +17,14 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: process.env.ENV === 'production',
+    Secure: process.env.ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000,
+    MaxAge: 24 * 60 * 60 * 1000,
     sameSite: process.env.ENV === 'production' ? 'none' : 'lax',
+    SameSite: process.env.ENV === 'production' ? 'none' : 'lax',
+    httpOnly: true,
+    HttpOnly: true,
+    // domain: process.env.ENV === 'production' ? '.onrender.com' : undefined
   }
 }));
 
@@ -30,16 +36,21 @@ console.log(JSON.stringify({
   cookie: {
     secure: process.env.ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000,
+    MaxAge: 24 * 60 * 60 * 1000,
     sameSite: process.env.ENV === 'production' ? 'none' : 'lax',
-  },
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://donmezahmet.github.io',
-    process.env.FRONTEND_URL,
-    process.env.REDIRECT_URL
-  ],
-}, null ,4));
+    SameSite: process.env.ENV === 'production' ? 'none' : 'lax',
+    httpOnly: true,
+    domain: process.env.ENV === 'production' ? '.onrender.com' : undefined,
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://donmezahmet.github.io',
+      'https://exe-dash-backend.onrender.com',
+      process.env.FRONTEND_URL,
+      process.env.REDIRECT_URL
+    ],
+  }
+}, null, 4));
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -50,6 +61,7 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:3000',
     'https://donmezahmet.github.io',
+    'https://exe-dash-backend.onrender.com',
     process.env.FRONTEND_URL,
     process.env.REDIRECT_URL
   ],
