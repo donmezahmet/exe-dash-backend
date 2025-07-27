@@ -31,6 +31,10 @@ console.log(JSON.stringify({
       process.env.FRONTEND_URL,
       process.env.REDIRECT_URL
     ],
+    CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? `${process.env.GOOGLE_CLIENT_ID.substring(0, 10)}...` : 'MISSING',
+    CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'MISSING',
+    BASE_URL: process.env.BASE_URL,
+    CALLBACK_URL: `${process.env.BASE_URL}/api/auth/callback/google`
   }
 }, null, 4));
 
@@ -40,27 +44,33 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: `${process.env.BASE_URL}/api/auth/callback/google`,
-      scope: ["profile"],
-      state: true,
+      state: false,
     },
-    function verify(_issuer, profile, cb) {
-      console.log('OAuth Profile:', profile); // Debug için
+    function verify(issuer, profile, cb) {
+      console.log('🎉 VERIFY FUNCTION CALLED!');
+      console.log('🔍 Issuer:', issuer);
+      console.log('🔍 Profile received:', {
+        id: profile.id,
+        email: profile.email,
+        displayName: profile.displayName,
+        allKeys: Object.keys(profile)
+      });
 
       try {
         const user = {
           id: profile.id,
-          email: profile.email || profile.emails?.[0]?.value,
-          name: profile.displayName || profile.name,
-          picture: profile.picture || profile.photos?.[0]?.value
+          email: profile.email,
+          name: profile.displayName,
+          picture: profile.picture
         };
 
-        console.log('Processed User:', user);
+        console.log('✅ User object created:', user);
         return cb(null, user);
       } catch (error) {
-        console.error('Profile processing error:', error);
+        console.error('❌ Error in verify function:', error);
         return cb(error, null);
       }
-    },
+    }
   )
 );
 
@@ -100,8 +110,8 @@ app.use((request, _response, next) => {
 });
 
 // Initialize Passport
-app.use(passport.session());
 app.use(passport.initialize());
+app.use(passport.session());
 
 console.log(JSON.stringify({
   title: 'Session Configuration',
